@@ -1,0 +1,120 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * Helpers pour les pages sectorielles (Éducation, Santé, Urbanisme, Hygiène, etc.)
+ * Affichage cohérent : hero + 3 cartes d'info + CTA.
+ */
+
+if (!function_exists('maire_page_sectorielle_render')) {
+    /**
+     * @param array $config {
+     *     @type string $icone   Émoji représentant le service.
+     *     @type string $kicker  Texte au-dessus du titre.
+     *     @type string $titreH1 Titre principal (peut contenir un span avec gradient).
+     *     @type string $titreHilight Mot mis en valeur dans le titre (sera passé en gradient).
+     *     @type string $description Sous-titre.
+     *     @type string $heroGradient Classes Tailwind du dégradé hero (ex : "from-emerald-700 to-teal-900").
+     *     @type string $blobColor   Classe couleur Tailwind pour les blobs (ex : "bg-emerald-400/30").
+     *     @type array  $blocs Liste de 3 blocs : ['icone', 'titre', 'gradient', 'puces' => string[]].
+     *     @type string $ctaLabel CTA principal.
+     *     @type string $ctaLien   Lien CTA.
+     *     @type array  $stats Optionnel : ['valeur', 'suffix', 'label'] x N.
+     * }
+     */
+    function maire_page_sectorielle_render(array $config): void
+    {
+        $heroBg = $config['heroGradient'] ?? 'from-mairie-800 to-mairie-950';
+        $blobColor = $config['blobColor'] ?? 'bg-gold-500/25';
+        $blobColor2 = $config['blobColor2'] ?? 'bg-mairie-400/30';
+        $stats = $config['stats'] ?? [];
+        ?>
+        <main class="overflow-hidden">
+            <!-- HERO -->
+            <section class="relative bg-gradient-to-br <?php echo htmlspecialchars($heroBg, ENT_QUOTES, 'UTF-8'); ?> text-white py-24 maire-grain">
+                <div class="absolute -top-32 -right-32 w-[35rem] h-[35rem] <?php echo htmlspecialchars($blobColor, ENT_QUOTES, 'UTF-8'); ?> maire-blob blur-3xl pointer-events-none" aria-hidden="true"></div>
+                <div class="absolute -bottom-32 -left-32 w-[35rem] h-[35rem] <?php echo htmlspecialchars($blobColor2, ENT_QUOTES, 'UTF-8'); ?> maire-blob blur-3xl pointer-events-none" style="animation-delay: -10s;" aria-hidden="true"></div>
+
+                <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+                    <div class="flex flex-wrap items-end justify-between gap-8">
+                        <div class="max-w-3xl">
+                            <span class="maire-tag bg-white/10 backdrop-blur-sm border border-white/20 text-white/90 mb-5">
+                                <span class="text-xl"><?php echo $config['icone'] ?? '🏛️'; ?></span>
+                                <?php echo htmlspecialchars($config['kicker'] ?? 'Service municipal', ENT_QUOTES, 'UTF-8'); ?>
+                            </span>
+                            <h1 class="text-5xl md:text-6xl lg:text-7xl font-black leading-[0.95] tracking-tight mb-5">
+                                <?php echo htmlspecialchars($config['titreH1'] ?? 'Service municipal', ENT_QUOTES, 'UTF-8'); ?><?php if (!empty($config['titreHilight'])): ?><br><span class="maire-text-gradient"><?php echo htmlspecialchars($config['titreHilight'], ENT_QUOTES, 'UTF-8'); ?></span><?php endif; ?>
+                            </h1>
+                            <p class="text-xl text-white/85 leading-relaxed max-w-2xl">
+                                <?php echo htmlspecialchars($config['description'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
+                            </p>
+                        </div>
+
+                        <?php if (!empty($stats)): ?>
+                            <div class="grid grid-cols-<?php echo min(3, count($stats)); ?> gap-3 min-w-[280px]">
+                                <?php foreach ($stats as $stat): ?>
+                                    <div class="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15">
+                                        <p class="text-3xl font-black"><span class="maire-counter" data-target="<?php echo htmlspecialchars((string) $stat['valeur'], ENT_QUOTES, 'UTF-8'); ?>" data-suffix="<?php echo htmlspecialchars($stat['suffix'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">0</span></p>
+                                        <p class="text-[10px] text-white/70 uppercase tracking-wider font-bold mt-1"><?php echo htmlspecialchars($stat['label'], ENT_QUOTES, 'UTF-8'); ?></p>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </section>
+
+            <!-- BLOCS D'INFORMATION -->
+            <section class="py-16 bg-slate-50 dark:bg-slate-900">
+                <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <?php foreach (($config['blocs'] ?? []) as $bloc):
+                            $gradient = $bloc['gradient'] ?? 'from-mairie-700 to-mairie-900';
+                        ?>
+                            <article class="maire-bento-card tw-card p-7 relative overflow-hidden">
+                                <div class="absolute -top-8 -right-8 w-40 h-40 bg-gradient-to-br <?php echo htmlspecialchars($gradient, ENT_QUOTES, 'UTF-8'); ?> opacity-10 rounded-full blur-2xl pointer-events-none"></div>
+                                <div class="relative">
+                                    <span class="inline-flex w-14 h-14 mb-4 rounded-2xl bg-gradient-to-br <?php echo htmlspecialchars($gradient, ENT_QUOTES, 'UTF-8'); ?> text-white items-center justify-center text-2xl shadow-md">
+                                        <?php echo $bloc['icone'] ?? '✓'; ?>
+                                    </span>
+                                    <h3 class="text-xl font-black text-slate-900 dark:text-white mb-4 leading-tight">
+                                        <?php echo htmlspecialchars($bloc['titre'] ?? '', ENT_QUOTES, 'UTF-8'); ?>
+                                    </h3>
+                                    <ul class="space-y-2 text-sm">
+                                        <?php foreach (($bloc['puces'] ?? []) as $puce): ?>
+                                            <li class="flex items-start gap-2 text-slate-700 dark:text-slate-300">
+                                                <span class="text-mairie-600 dark:text-mairie-400 flex-shrink-0 mt-1 font-bold">→</span>
+                                                <span><?php echo htmlspecialchars($puce, ENT_QUOTES, 'UTF-8'); ?></span>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <!-- CTA -->
+                    <div class="mt-14 relative rounded-3xl overflow-hidden bg-gradient-to-br <?php echo htmlspecialchars($heroBg, ENT_QUOTES, 'UTF-8'); ?> text-white p-8 md:p-10">
+                        <div class="absolute -top-12 -right-12 w-60 h-60 <?php echo htmlspecialchars($blobColor, ENT_QUOTES, 'UTF-8'); ?> rounded-full blur-3xl maire-blob pointer-events-none" aria-hidden="true"></div>
+                        <div class="relative grid md:grid-cols-[2fr_1fr] items-center gap-6">
+                            <div>
+                                <h3 class="text-2xl md:text-3xl font-black mb-2">Besoin d'aide ou de précisions&nbsp;?</h3>
+                                <p class="text-white/85">Contactez l'équipe municipale pour toutes vos démarches concernant ce service.</p>
+                            </div>
+                            <div class="flex flex-wrap gap-3">
+                                <a href="<?php echo htmlspecialchars($config['ctaLien'] ?? 'contact.php', ENT_QUOTES, 'UTF-8'); ?>" class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gold-400 hover:bg-gold-300 text-mairie-950 font-black transition-colors">
+                                    <?php echo htmlspecialchars($config['ctaLabel'] ?? 'Faire une demande', ENT_QUOTES, 'UTF-8'); ?>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                                </a>
+                                <a href="services.php" class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 font-black transition-colors">
+                                    Tous les services
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <?php
+    }
+}

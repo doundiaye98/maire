@@ -1,0 +1,23 @@
+# API publique — bloquer toute exécution PHP autre que les endpoints attendus
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /maire/api/
+
+    # Redirige /api/v1 → /api/v1/
+    RewriteRule ^v1$ v1/index.php [L]
+
+    # Vrai fichier ou dossier → on laisse passer
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+</IfModule>
+
+# Désactive l'écoute des extensions sensibles
+<FilesMatch "\.(env|ini|log|sql|md)$">
+    Require all denied
+</FilesMatch>
+
+# Empêche l'exécution de _bootstrap.php depuis l'extérieur
+<Files "_bootstrap.php">
+    Require all denied
+</Files>

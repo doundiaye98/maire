@@ -1,0 +1,6 @@
+[2026-05-11T12:25:38+00:00] SMS-LOG | to=+221770000001 | [Mairie] Ceci est un test de notification d'urgence ciblée sur le quartier Nord. Veuillez ignorer.
+[2026-05-11T12:25:38+00:00] SMS-LOG | to=+221770000003 | [Mairie] Ceci est un test de notification d'urgence ciblée sur le quartier Nord. Veuillez ignorer.
+[2026-05-11T12:25:38+00:00] SMS-LOG | to=+221770000000 | [Mairie] Test SMS opt-out
+[2026-05-11T12:25:38+00:00] SMS-LOG | to=+221770000002 | [Mairie] Test SMS opt-out
+[2026-05-11T12:25:38+00:00] SMS-LOG | to=+221770000003 | [Mairie] Test SMS opt-out
+[2026-05-11T12:29:44+00:00] SMS-LOG | to=+221770000000 | [Mairie] Alerte test SMS — sera consignee dans logs/sms-outbox.log

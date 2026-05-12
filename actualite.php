@@ -1,0 +1,150 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/includes/site-data.php';
+
+$actualites = getActualitesCatalogue();
+$actualiteId = (int) ($_GET['id'] ?? 0);
+
+$actualite = null;
+foreach ($actualites as $item) {
+    if ((int) $item['id'] === $actualiteId) {
+        $actualite = $item;
+        break;
+    }
+}
+
+if ($actualite === null) {
+    $pageTitle = 'Actualité introuvable | Rufisque-Est';
+    $pageDescription = "L'actualité demandée est introuvable.";
+    $pageType = 'website';
+    require __DIR__ . '/includes/header.php';
+    ?>
+    <main class="overflow-hidden">
+        <section class="relative maire-hero-bg text-white py-24 maire-grain">
+            <div class="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center relative z-10">
+                <div class="text-7xl mb-4 opacity-80">📰</div>
+                <h1 class="text-4xl md:text-5xl font-black mb-3">Actualité introuvable</h1>
+                <p class="text-mairie-100 mb-6">L'actualité demandée n'existe pas ou a été retirée.</p>
+                <div class="flex flex-wrap gap-3 justify-center">
+                    <a class="tw-btn-primary" href="actualites.php">Voir toutes les actualités</a>
+                    <a class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white font-black transition-colors" href="index.php">Retour à l'accueil</a>
+                </div>
+            </div>
+        </section>
+    </main>
+    <?php
+    require __DIR__ . '/includes/footer.php';
+    exit;
+}
+
+$pageTitle = $actualite['titre'] . ' | Actualites Rufisque-Est';
+$pageDescription = $actualite['resume'];
+$pageImage = $actualite['image'];
+$pageType = 'article';
+$publishedDateIso = date('c', strtotime((string) $actualite['date_publication']));
+$currentScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+$logoUrl = $currentScheme . '://' . $host . '/img/f799f37016151c7eff761f955aea5006.jpg';
+$pageJsonLd = [
+    '@context' => 'https://schema.org',
+    '@type' => 'NewsArticle',
+    'headline' => $actualite['titre'],
+    'description' => $actualite['resume'],
+    'image' => [$actualite['image']],
+    'datePublished' => $publishedDateIso,
+    'dateModified' => $publishedDateIso,
+    'author' => [
+        '@type' => 'Organization',
+        'name' => 'Mairie de Rufisque-Est',
+    ],
+    'publisher' => [
+        '@type' => 'Organization',
+        'name' => 'Mairie de Rufisque-Est',
+        'logo' => [
+            '@type' => 'ImageObject',
+            'url' => $logoUrl,
+        ],
+    ],
+];
+require __DIR__ . '/includes/header.php';
+
+$autresActualites = array_values(array_filter(
+    $actualites,
+    static fn(array $item): bool => (int) $item['id'] !== (int) $actualite['id']
+));
+$suggestions = array_slice($autresActualites, 0, 3);
+?>
+<main class="overflow-hidden">
+    <!-- HERO ARTICLE -->
+    <section class="relative maire-hero-bg text-white py-20 maire-grain">
+        <div class="absolute -top-32 -right-32 w-[35rem] h-[35rem] bg-gold-500/25 maire-blob blur-3xl pointer-events-none" aria-hidden="true"></div>
+
+        <div class="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 relative z-10">
+            <a href="actualites.php" class="inline-flex items-center gap-2 text-mairie-200 hover:text-white text-sm font-bold mb-6 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                Toutes les actualités
+            </a>
+            <span class="maire-tag bg-white/10 backdrop-blur-sm border border-white/20 text-gold-300 mb-4">
+                <span class="w-1.5 h-1.5 rounded-full bg-gold-400 animate-pulse"></span>
+                Actualité — <?php echo htmlspecialchars($actualite['categorie']); ?>
+            </span>
+            <h1 class="text-3xl md:text-4xl lg:text-5xl font-black leading-tight tracking-tight mb-4">
+                <?php echo htmlspecialchars($actualite['titre']); ?>
+            </h1>
+            <p class="text-sm text-mairie-200 font-bold">📅 Publication du <?php echo htmlspecialchars((string) date('d/m/Y', strtotime((string) $actualite['date_publication']))); ?></p>
+        </div>
+    </section>
+
+    <!-- ARTICLE -->
+    <section class="py-16 bg-slate-50 dark:bg-slate-900">
+        <div class="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+
+            <article class="tw-card overflow-hidden">
+                <div class="relative aspect-[16/9] overflow-hidden">
+                    <img class="absolute inset-0 w-full h-full object-cover" loading="lazy" src="<?php echo htmlspecialchars($actualite['image']); ?>" alt="<?php echo htmlspecialchars($actualite['titre']); ?>">
+                </div>
+                <div class="p-8 md:p-10">
+                    <p class="text-xl md:text-2xl text-slate-800 dark:text-slate-100 leading-relaxed font-bold mb-6 maire-text-gradient">
+                        <?php echo htmlspecialchars($actualite['resume']); ?>
+                    </p>
+                    <div class="prose prose-lg max-w-none text-slate-700 dark:text-slate-300 leading-relaxed">
+                        <p><?php echo nl2br(htmlspecialchars($actualite['contenu'])); ?></p>
+                    </div>
+                </div>
+            </article>
+
+            <?php if (!empty($suggestions)): ?>
+                <div class="mt-14">
+                    <div class="flex items-center gap-3 mb-6">
+                        <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-mairie-700 to-mairie-900 text-white flex items-center justify-center text-xl">📰</span>
+                        <h2 class="text-2xl font-black text-slate-900 dark:text-white">À lire aussi</h2>
+                    </div>
+                    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        <?php foreach ($suggestions as $item): ?>
+                            <a href="actualite.php?id=<?php echo urlencode((string) $item['id']); ?>" class="tw-card group overflow-hidden flex flex-col">
+                                <div class="relative aspect-[16/10] overflow-hidden">
+                                    <img class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" src="<?php echo htmlspecialchars($item['image']); ?>" alt="<?php echo htmlspecialchars($item['titre']); ?>">
+                                    <span class="absolute top-3 left-3 maire-tag bg-white/90 backdrop-blur-md text-mairie-800"><?php echo htmlspecialchars($item['categorie']); ?></span>
+                                </div>
+                                <div class="p-5">
+                                    <h3 class="text-base font-black text-slate-900 dark:text-white mb-2 line-clamp-2 group-hover:text-mairie-700 dark:group-hover:text-mairie-300 transition-colors"><?php echo htmlspecialchars($item['titre']); ?></h3>
+                                    <p class="text-xs text-slate-600 dark:text-slate-400 line-clamp-2"><?php echo htmlspecialchars($item['resume']); ?></p>
+                                </div>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <div class="mt-12 flex flex-wrap gap-3">
+                <a class="tw-btn-primary" href="actualites.php">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                    Retour aux actualités
+                </a>
+                <a class="tw-btn-outline" href="contact.php">Contacter la mairie</a>
+            </div>
+        </div>
+    </section>
+</main>
+<?php require __DIR__ . '/includes/footer.php'; ?>

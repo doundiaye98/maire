@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Hors-ligne — Mairie</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        body { display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; padding:1rem; background:#f6faf7; }
+        .offline-card {
+            max-width: 480px;
+            background: #fff;
+            padding: 2rem;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(12,74,62,0.12);
+            text-align: center;
+        }
+        .offline-card h1 { color:#0c4a3e; font-size:1.6rem; margin-top:0; }
+        .offline-card .icon { font-size:3rem; margin-bottom:0.5rem; }
+        .offline-card .btn { display:inline-block; margin-top:1rem; padding:0.65rem 1.2rem; background:#0c4a3e; color:#fff; border-radius:8px; text-decoration:none; }
+    </style>
+</head>
+<body>
+    <article class="offline-card">
+        <div class="icon" aria-hidden="true">📴</div>
+        <h1>Vous êtes hors-ligne</h1>
+        <p>La connexion à internet semble interrompue. Vérifiez votre réseau ou réessayez dans un instant.</p>
+        <p style="color:#64748b;font-size:0.9rem;">Les pages déjà consultées restent accessibles : utilisez le bouton « Retour » pour y revenir.</p>
+        <a href="./" class="btn" onclick="window.location.reload(); return false;">↻ Réessayer</a>
+    </article>
+</body>
+</html>
