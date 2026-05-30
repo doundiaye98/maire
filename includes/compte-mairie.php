@@ -14,10 +14,12 @@ function maire_ensure_abonnements_compte_mairie_column(PDO $pdo): void
     } catch (Throwable $e) {
         // colonne déjà présente
     }
-    try {
-        $pdo->exec("UPDATE abonnements SET role_utilisateur = 'admin' WHERE email = 'abonne@demo.rufisque.sn' AND role_utilisateur <> 'admin' LIMIT 1");
-    } catch (Throwable $e) {
-        // ignorer si la table n’existe pas encore
+    if (function_exists('maire_is_dev_env') && maire_is_dev_env()) {
+        try {
+            $pdo->exec("UPDATE abonnements SET role_utilisateur = 'admin' WHERE email = 'abonne@demo.rufisque.sn' AND role_utilisateur <> 'admin' LIMIT 1");
+        } catch (Throwable $e) {
+            // ignorer si la table n’existe pas encore
+        }
     }
 }
 

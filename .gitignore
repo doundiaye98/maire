@@ -1,1 +1,58 @@
+# =====================================================================
+#  Mairie de Rufisque-Est — .gitignore
+# =====================================================================
+
+# ── Secrets & configuration locale ─────────────────────────────────────
 config/secrets.php
+.env
+.env.local
+.env.*.local
+*.local.php
+
+# ── Dépendances ────────────────────────────────────────────────────────
+/vendor/
+/node_modules/
+composer.lock
+package-lock.json
+yarn.lock
+
+# ── Artefacts de build ─────────────────────────────────────────────────
+assets/css/tailwind.css
+assets/css/tailwind.css.map
+/dist/
+/build/
+
+# ── Données générées à l'exécution ─────────────────────────────────────
+/logs/
+/uploads/
+!/uploads/.gitkeep
+*.log
+*.cache
+
+# ── Caches de tests / outils ───────────────────────────────────────────
+.phpunit.cache/
+.phpunit.result.cache
+coverage/
+.coverage/
+*.coverage.html
+.php-cs-fixer.cache
+
+# ── Éditeurs / OS ──────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Sauvegardes ────────────────────────────────────────────────────────
+*.bak
+*.orig
+*.tmp
+*.backup
+
+# ── PWA / divers ───────────────────────────────────────────────────────
+.well-known/
+sw-precache-*.js

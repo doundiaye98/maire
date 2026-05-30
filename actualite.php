@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/includes/site-data.php';
+require_once __DIR__ . '/includes/site-paths.php';
 
 $actualites = getActualitesCatalogue();
 $actualiteId = (int) ($_GET['id'] ?? 0);
@@ -21,7 +22,7 @@ if ($actualite === null) {
     require __DIR__ . '/includes/header.php';
     ?>
     <main class="overflow-hidden">
-        <section class="relative maire-hero-bg text-white py-24 maire-grain">
+        <section class="relative maire-hero-bg text-white py-24 maire-grain overflow-hidden">
             <div class="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center relative z-10">
                 <div class="text-7xl mb-4 opacity-80">📰</div>
                 <h1 class="text-4xl md:text-5xl font-black mb-3">Actualité introuvable</h1>
@@ -43,9 +44,7 @@ $pageDescription = $actualite['resume'];
 $pageImage = $actualite['image'];
 $pageType = 'article';
 $publishedDateIso = date('c', strtotime((string) $actualite['date_publication']));
-$currentScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
-$logoUrl = $currentScheme . '://' . $host . '/img/f799f37016151c7eff761f955aea5006.jpg';
+$logoUrl = maire_logo_url_absolue();
 $pageJsonLd = [
     '@context' => 'https://schema.org',
     '@type' => 'NewsArticle',
@@ -76,16 +75,16 @@ $autresActualites = array_values(array_filter(
 $suggestions = array_slice($autresActualites, 0, 3);
 ?>
 <main class="overflow-hidden">
-    <!-- HERO ARTICLE -->
-    <section class="relative maire-hero-bg text-white py-20 maire-grain">
+    <section class="relative maire-hero-bg text-white py-20 lg:py-24 maire-grain overflow-hidden">
         <div class="absolute -top-32 -right-32 w-[35rem] h-[35rem] bg-gold-500/25 maire-blob blur-3xl pointer-events-none" aria-hidden="true"></div>
+        <div class="absolute inset-0 opacity-[0.08] pointer-events-none" style="background-image: linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px); background-size: 44px 44px;" aria-hidden="true"></div>
 
         <div class="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 relative z-10">
             <a href="actualites.php" class="inline-flex items-center gap-2 text-mairie-200 hover:text-white text-sm font-bold mb-6 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                 Toutes les actualités
             </a>
-            <span class="maire-tag bg-white/10 backdrop-blur-sm border border-white/20 text-gold-300 mb-4">
+            <span class="maire-section-kicker mb-4 !bg-white/12 !text-white !border-white/20">
                 <span class="w-1.5 h-1.5 rounded-full bg-gold-400 animate-pulse"></span>
                 Actualité — <?php echo htmlspecialchars($actualite['categorie']); ?>
             </span>
@@ -96,18 +95,23 @@ $suggestions = array_slice($autresActualites, 0, 3);
         </div>
     </section>
 
-    <!-- ARTICLE -->
     <section class="py-16 bg-slate-50 dark:bg-slate-900">
         <div class="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-
-            <article class="tw-card overflow-hidden">
-                <div class="relative aspect-[16/9] overflow-hidden">
-                    <img class="absolute inset-0 w-full h-full object-cover" loading="lazy" src="<?php echo htmlspecialchars($actualite['image']); ?>" alt="<?php echo htmlspecialchars($actualite['titre']); ?>">
+            <article class="maire-editorial-card overflow-hidden !p-0">
+                <div class="relative aspect-[16/9] overflow-hidden <?php echo htmlspecialchars(maire_actualite_image_media_bg($actualite), ENT_QUOTES, 'UTF-8'); ?>">
+                    <img class="<?php echo htmlspecialchars(maire_actualite_image_classes($actualite), ENT_QUOTES, 'UTF-8'); ?>" loading="lazy" src="<?php echo htmlspecialchars($actualite['image']); ?>" alt="<?php echo htmlspecialchars($actualite['titre']); ?>">
                 </div>
                 <div class="p-8 md:p-10">
-                    <p class="text-xl md:text-2xl text-slate-800 dark:text-slate-100 leading-relaxed font-bold mb-6 maire-text-gradient">
-                        <?php echo htmlspecialchars($actualite['resume']); ?>
-                    </p>
+                    <div class="grid md:grid-cols-[1fr_auto] gap-4 items-start mb-8">
+                        <p class="text-xl md:text-2xl text-slate-800 dark:text-slate-100 leading-relaxed font-bold maire-text-gradient">
+                            <?php echo htmlspecialchars($actualite['resume']); ?>
+                        </p>
+                        <div class="maire-panel !p-4 min-w-[13rem]">
+                            <p class="text-[0.72rem] uppercase tracking-[0.22em] text-slate-500 font-black mb-2">Repère</p>
+                            <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">Article publié par la Mairie de Rufisque-Est dans la rubrique <?php echo htmlspecialchars($actualite['categorie']); ?>.</p>
+                        </div>
+                    </div>
+                    <div class="maire-glow-line mb-8"></div>
                     <div class="prose prose-lg max-w-none text-slate-700 dark:text-slate-300 leading-relaxed">
                         <p><?php echo nl2br(htmlspecialchars($actualite['contenu'])); ?></p>
                     </div>
@@ -122,9 +126,9 @@ $suggestions = array_slice($autresActualites, 0, 3);
                     </div>
                     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                         <?php foreach ($suggestions as $item): ?>
-                            <a href="actualite.php?id=<?php echo urlencode((string) $item['id']); ?>" class="tw-card group overflow-hidden flex flex-col">
-                                <div class="relative aspect-[16/10] overflow-hidden">
-                                    <img class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" loading="lazy" src="<?php echo htmlspecialchars($item['image']); ?>" alt="<?php echo htmlspecialchars($item['titre']); ?>">
+                            <a href="actualite.php?id=<?php echo urlencode((string) $item['id']); ?>" class="maire-editorial-card group overflow-hidden flex flex-col !p-0">
+                                <div class="relative aspect-[16/10] overflow-hidden <?php echo htmlspecialchars(maire_actualite_image_media_bg($item), ENT_QUOTES, 'UTF-8'); ?>">
+                                    <img class="<?php echo htmlspecialchars(maire_actualite_image_classes($item), ENT_QUOTES, 'UTF-8'); ?>" loading="lazy" src="<?php echo htmlspecialchars($item['image']); ?>" alt="<?php echo htmlspecialchars($item['titre']); ?>">
                                     <span class="absolute top-3 left-3 maire-tag bg-white/90 backdrop-blur-md text-mairie-800"><?php echo htmlspecialchars($item['categorie']); ?></span>
                                 </div>
                                 <div class="p-5">

@@ -15,10 +15,6 @@ if ($pdo !== null && !maire_super_admin_session_valid() && !maire_feature_dispon
     exit;
 }
 
-if (empty($_SESSION['abo_admin_csrf'])) {
-    $_SESSION['abo_admin_csrf'] = bin2hex(random_bytes(32));
-}
-
 if ($pdo !== null) {
     maire_ensure_chatbot_tables($pdo);
 }
@@ -27,8 +23,7 @@ $flash = '';
 $flashType = 'success';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
-    $csrf = (string) ($_POST['csrf'] ?? '');
-    if (!hash_equals((string) $_SESSION['abo_admin_csrf'], $csrf)) {
+    if (!maire_csrf_validate(MAIRE_CSRF_SCOPE_ADMIN)) {
         $flash = 'Jeton CSRF invalide.';
         $flashType = 'danger';
     } else {
@@ -103,7 +98,7 @@ require __DIR__ . '/../includes/header.php';
             <article class="card">
                 <h2>➕ Ajouter une question/réponse</h2>
                 <form method="POST" action="chatbot-faq.php" style="display:grid;gap:0.6rem;">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                     <input type="hidden" name="action" value="creer">
 
                     <div style="display:grid;grid-template-columns:1fr 3fr 100px;gap:0.6rem;">
@@ -164,13 +159,13 @@ require __DIR__ . '/../includes/header.php';
                             <p style="margin:0;font-size:0.85rem;color:#64748b;">🔑 mots-clés : <em><?php echo htmlspecialchars((string) $r['mots_cles'], ENT_QUOTES, 'UTF-8'); ?></em></p>
                             <div class="detail-actions" style="margin-top:0.5rem;">
                                 <form method="POST" action="chatbot-faq.php" style="display:inline;">
-                                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                     <input type="hidden" name="action" value="toggle">
                                     <input type="hidden" name="id" value="<?php echo (int) $r['id']; ?>">
                                     <button type="submit" class="btn btn-outline-dark" style="padding:0.3rem 0.6rem;font-size:0.85rem;"><?php echo (int) $r['actif'] === 1 ? '⏸ Désactiver' : '▶ Activer'; ?></button>
                                 </form>
                                 <form method="POST" action="chatbot-faq.php" style="display:inline;" onsubmit="return confirm('Supprimer cette entrée FAQ ?');">
-                                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                     <input type="hidden" name="action" value="supprimer">
                                     <input type="hidden" name="id" value="<?php echo (int) $r['id']; ?>">
                                     <button type="submit" class="btn btn-outline-dark" style="padding:0.3rem 0.6rem;font-size:0.85rem;color:#dc2626;">🗑</button>

@@ -9,10 +9,6 @@ require_once __DIR__ . '/../includes/compte-mairie.php';
 require_once __DIR__ . '/../includes/commune-abonnement-historique.php';
 require_once __DIR__ . '/../includes/feature-gates.php';
 
-if (empty($_SESSION['abo_admin_csrf'])) {
-    $_SESSION['abo_admin_csrf'] = bin2hex(random_bytes(32));
-}
-
 $feedback = null;
 $isError = false;
 $plansAutorises = [
@@ -49,8 +45,7 @@ if (!isset($pdo) || $pdo === null) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
-    $csrf = (string) ($_POST['csrf'] ?? '');
-    if (!hash_equals($_SESSION['abo_admin_csrf'] ?? '', $csrf)) {
+    if (!maire_csrf_validate(MAIRE_CSRF_SCOPE_ADMIN)) {
         $feedback = 'Jeton de sécurité invalide ou session expirée. Rechargez la page.';
         $isError = true;
     } else {
@@ -113,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
                             ]);
                             maire_sync_commune_vers_compte_mairie($pdo);
                             $feedback = 'Compte institutionnel mis à jour (plan et dates suivent l’abonnement communal).';
-                            $_SESSION['abo_admin_csrf'] = bin2hex(random_bytes(32));
+                            maire_csrf_invalidate(MAIRE_CSRF_SCOPE_ADMIN);
                         } else {
                             $up = $pdo->prepare('
                                 UPDATE abonnements
@@ -127,7 +122,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
                             ]);
                             maire_sync_commune_vers_compte_mairie($pdo);
                             $feedback = 'Compte institutionnel mis à jour (plan et dates suivent l’abonnement communal).';
-                            $_SESSION['abo_admin_csrf'] = bin2hex(random_bytes(32));
+                            maire_csrf_invalidate(MAIRE_CSRF_SCOPE_ADMIN);
                         }
                     } else {
                         if ($nouveauMdp !== '') {
@@ -170,7 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
                             ]);
                         }
                         $feedback = 'Abonnement mis à jour.';
-                        $_SESSION['abo_admin_csrf'] = bin2hex(random_bytes(32));
+                        maire_csrf_invalidate(MAIRE_CSRF_SCOPE_ADMIN);
                     }
                 } catch (Throwable $e) {
                     $feedback = 'Erreur lors de la mise à jour.';
@@ -258,7 +253,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
                         maire_sync_commune_vers_compte_mairie($pdo);
                     }
                     $feedback = $newCompteMairie ? 'Compte institutionnel mairie créé et aligné sur l’abonnement communal.' : 'Compte créé.';
-                    $_SESSION['abo_admin_csrf'] = bin2hex(random_bytes(32));
+                    maire_csrf_invalidate(MAIRE_CSRF_SCOPE_ADMIN);
                 } catch (Throwable $e) {
                     $feedback = 'Création impossible (e-mail déjà utilisé ou erreur base).';
                     $isError = true;
@@ -316,7 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
                             : (($idMairieLog !== null && $sid === $idMairieLog) ? 'compte_mairie' : 'admin_provisoire');
                         maire_log_commune_abonnement($pdo, $rowLog, 'plan_change', null, $sid > 0 ? $sid : null, $actorSrc);
                         $feedback = 'Abonnement communal enregistré : il s’applique immédiatement à tout le site (portail, état civil, etc.).';
-                        $_SESSION['abo_admin_csrf'] = bin2hex(random_bytes(32));
+                        maire_csrf_invalidate(MAIRE_CSRF_SCOPE_ADMIN);
                     } catch (Throwable $e) {
                         $feedback = 'Impossible d’enregistrer l’abonnement communal.';
                         $isError = true;
@@ -358,7 +353,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
                         'admin_provisoire'
                     );
                     $feedback = 'Ce compte est maintenant le compte institutionnel mairie : seul il pourra modifier l’abonnement communal (hors console secrète).';
-                    $_SESSION['abo_admin_csrf'] = bin2hex(random_bytes(32));
+                    maire_csrf_invalidate(MAIRE_CSRF_SCOPE_ADMIN);
                 } catch (Throwable $e) {
                     $feedback = 'Impossible d’enregistrer la promotion.';
                     $isError = true;
@@ -396,7 +391,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
                             $detailTr = 'ancien_id=' . ($ancienId ?? 0) . ',nouveau_id=' . $tid;
                             maire_log_commune_abonnement($pdo, $rowLog, 'mairie_transfer', $detailTr, null, 'super_console');
                             $feedback = 'Compte institutionnel transféré sur le compte #' . $tid . ' (' . (string) ($trow['email'] ?? '') . ').';
-                            $_SESSION['abo_admin_csrf'] = bin2hex(random_bytes(32));
+                            maire_csrf_invalidate(MAIRE_CSRF_SCOPE_ADMIN);
                         }
                     } catch (Throwable $e) {
                         $feedback = 'Impossible d’effectuer le transfert.';
@@ -502,7 +497,7 @@ require __DIR__ . '/../includes/header.php';
                     <h2>Désigner le compte institutionnel mairie</h2>
                     <p class="std-dash-note">Aucun compte dédié n’est encore défini. Le compte avec lequel vous êtes connecté (<strong><?php echo htmlspecialchars((string) ($_SESSION['subscriber_email'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></strong>) pourra devenir le <strong>seul</strong> compte autorisé à modifier l’abonnement communal (hors console secrète).</p>
                     <form method="POST" class="admin-edit-form">
-                        <input type="hidden" name="csrf" value="<?php echo htmlspecialchars($_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                         <input type="hidden" name="action" value="promouvoir_compte_mairie">
                         <div class="detail-actions">
                             <button class="btn btn-primary" type="submit">Utiliser mon compte comme institutionnel mairie</button>
@@ -517,7 +512,7 @@ require __DIR__ . '/../includes/header.php';
                     <h2>Abonnement communal (effet immédiat sur tout le site)</h2>
                     <p class="std-dash-note">Palier actuel : <strong><?php echo htmlspecialchars($communePalierLibelle, ENT_QUOTES, 'UTF-8'); ?></strong>. Enregistrement = application sur le portail public, l’état civil numérique, les garde d’accès, etc.</p>
                     <form method="POST" class="admin-edit-form">
-                        <input type="hidden" name="csrf" value="<?php echo htmlspecialchars($_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                         <input type="hidden" name="action" value="commune_update">
                         <label for="commune_plan">Formule communale</label>
                         <select id="commune_plan" name="commune_plan" required>
@@ -560,7 +555,7 @@ require __DIR__ . '/../includes/header.php';
                     <h2><?php echo $idCompteMairie === null ? 'Désigner le compte institutionnel' : 'Transférer le compte institutionnel'; ?> (console secrète)</h2>
                     <p class="std-dash-note"><?php if ($idCompteMairie === null): ?>Aucun compte institutionnel n’est encore défini : choisissez un compte ci-dessous (il passera <strong>administrateur</strong> et sera aligné sur l’abonnement communal).<?php else: ?>Désigner un autre compte comme <strong>seul</strong> habilité à modifier l’abonnement communal (hors cette console). Le compte cible devient administrateur et se voit aligner sur les dates et le plan communaux.<?php endif; ?></p>
                     <form method="POST" class="admin-edit-form">
-                        <input type="hidden" name="csrf" value="<?php echo htmlspecialchars($_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                         <input type="hidden" name="action" value="transfer_compte_mairie">
                         <label for="transfer_cible_id">Nouveau compte institutionnel</label>
                         <select id="transfer_cible_id" name="transfer_cible_id" required>
@@ -581,7 +576,7 @@ require __DIR__ . '/../includes/header.php';
             <article class="card">
                 <h2>Créer un compte agent / accès personnel</h2>
                 <form method="POST" class="admin-edit-form">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars($_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                     <input type="hidden" name="action" value="create_abo">
                     <label for="new_email">E-mail</label>
                     <input id="new_email" name="new_email" type="email" required autocomplete="off">
@@ -638,7 +633,7 @@ require __DIR__ . '/../includes/header.php';
                             ?>
                             <article class="admin-item">
                                 <form method="POST" class="admin-edit-form">
-                                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars($_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                     <input type="hidden" name="action" value="update_abo">
                                     <input type="hidden" name="id" value="<?php echo (int) $abo['id']; ?>">
                                     <p><strong>#<?php echo (int) $abo['id']; ?></strong> — créé <?php echo htmlspecialchars((string) ($abo['created_at'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
@@ -748,7 +743,7 @@ require __DIR__ . '/../includes/header.php';
                     <a class="btn btn-outline-dark" href="../abonnement.php">Page publique abonnement</a>
                     <?php if ($estConsoleSecrete): ?>
                         <form method="POST" action="super-admin-exit.php" style="display:inline;">
-                            <input type="hidden" name="csrf" value="<?php echo htmlspecialchars($_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                             <button class="btn btn-outline-dark" type="submit">Quitter la console secrète</button>
                         </form>
                     <?php endif; ?>

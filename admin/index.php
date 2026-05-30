@@ -10,6 +10,7 @@ require_once __DIR__ . '/../includes/super-admin-session.php';
 require_once __DIR__ . '/../includes/commune-abonnement.php';
 require_once __DIR__ . '/../includes/compte-mairie.php';
 require_once __DIR__ . '/../includes/signalements.php';
+require_once __DIR__ . '/../includes/audiences-maire.php';
 require_once __DIR__ . '/../includes/documents-publics.php';
 require_once __DIR__ . '/../includes/feature-gates.php';
 require_once __DIR__ . '/../includes/stats-temporelles.php';
@@ -19,6 +20,7 @@ require_once __DIR__ . '/../includes/paiements.php';
 require_once __DIR__ . '/../includes/conseil-sessions.php';
 require_once __DIR__ . '/../includes/chatbot.php';
 require_once __DIR__ . '/../includes/api-keys.php';
+require_once __DIR__ . '/../includes/etat-civil-demande.php';
 
 $estConsoleSecrete = maire_super_admin_session_valid();
 $emailUtilisateur = (string) ($_SESSION['subscriber_email'] ?? '');
@@ -31,6 +33,7 @@ $idCompteMairie = null;
 $emailMairieInst = '';
 $nbAbonnements = 0;
 $abonnementsExpirentBientot = 0;
+$compteursEtatCivil = ['recu' => 0, 'en_cours' => 0, 'pret' => 0, 'rejete' => 0];
 
 if (isset($pdo) && $pdo !== null) {
     try {
@@ -67,7 +70,9 @@ if (isset($pdo) && $pdo !== null) {
     }
 
     $compteursSignalements = maire_compter_signalements_par_statut($pdo);
+    $compteursAudiences = maire_compter_audiences_par_statut($pdo);
     $compteursDocuments = maire_compter_documents_publics($pdo);
+    $compteursEtatCivil = maire_compter_demandes_etat_civil_par_statut($pdo);
     $palierEffectifCommune = maire_palier_commune_actuel($pdo);
     $featuresEtat = maire_features_etat_pour_palier($palierEffectifCommune);
 
@@ -85,6 +90,7 @@ if (isset($pdo) && $pdo !== null) {
     $compteursPaiements = ['total' => 0, 'initie' => 0, 'en_attente' => 0, 'paye' => 0, 'echec' => 0, 'montant_paye' => 0.0, 'montant_attente' => 0.0];
     $compteursSignalements = ['nouveau' => 0, 'pris_en_charge' => 0, 'resolu' => 0, 'rejete' => 0];
     $compteursDocuments = ['total' => 0, 'publies' => 0, 'hors_ligne' => 0, 'telechargements' => 0];
+    $compteursEtatCivil = ['recu' => 0, 'en_cours' => 0, 'pret' => 0, 'rejete' => 0];
     $palierEffectifCommune = 'simple';
     $featuresEtat = maire_features_etat_pour_palier('simple');
     $chartSignalementsMois = ['labels' => [], 'data' => []];
@@ -362,6 +368,57 @@ if ($estCompteMairie) {
                 <?php endif; ?>
             </article>
 
+            <?php $audiencesActives = maire_feature_disponible_palier($palierEffectifCommune, 'audiences_maire'); ?>
+            <article class="tw-card p-6 <?php echo !$audiencesActives ? 'opacity-70' : ''; ?>">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-mairie-700 to-gold-500 text-white flex items-center justify-center shadow-md">🤝</span>
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white flex-1">Audiences Maire</h2>
+                    <?php if (!$audiencesActives): ?>
+                        <span class="tw-badge bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">🔒 Standard</span>
+                    <?php endif; ?>
+                </div>
+                <?php if ($audiencesActives): ?>
+                    <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">
+                        <strong class="text-amber-600"><?php echo (int) ($compteursAudiences['en_attente'] ?? 0); ?></strong> en attente
+                    </p>
+                    <a class="tw-btn-primary w-full text-sm" href="audiences-maire.php">Gérer les audiences</a>
+                    <a class="tw-btn-outline w-full text-sm mt-2" href="audiences-creneaux.php">Créneaux en ligne</a>
+                <?php else: ?>
+                    <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">Permettez les demandes d’audience en ligne (présentiel ou visio).</p>
+                    <a class="tw-btn-primary w-full text-sm" href="abonnements.php">Passer en Standard</a>
+                <?php endif; ?>
+            </article>
+
+            <article class="tw-card p-6">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-700 text-white flex items-center justify-center shadow-md">🪪</span>
+                    <h2 class="text-lg font-bold text-slate-900 dark:text-white flex-1">État civil</h2>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                    <div class="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 text-center">
+                        <div class="text-xl font-bold text-amber-600 dark:text-amber-300"><?php echo (int) ($compteursEtatCivil['recu'] ?? 0); ?></div>
+                        <div class="text-xs text-slate-600 dark:text-slate-400">À traiter</div>
+                    </div>
+                    <div class="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/30 text-center">
+                        <div class="text-xl font-bold text-blue-600 dark:text-blue-300"><?php echo (int) ($compteursEtatCivil['en_cours'] ?? 0); ?></div>
+                        <div class="text-xs text-slate-600 dark:text-slate-400">En cours</div>
+                    </div>
+                    <div class="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-center">
+                        <div class="text-xl font-bold text-emerald-600 dark:text-emerald-300"><?php echo (int) ($compteursEtatCivil['pret'] ?? 0); ?></div>
+                        <div class="text-xs text-slate-600 dark:text-slate-400">Prêts</div>
+                    </div>
+                    <div class="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/30 text-center">
+                        <div class="text-xl font-bold text-rose-600 dark:text-rose-300"><?php echo (int) ($compteursEtatCivil['rejete'] ?? 0); ?></div>
+                        <div class="text-xs text-slate-600 dark:text-slate-400">Rejetés</div>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">Recherchez une référence, ouvrez les pièces jointes et mettez à jour le statut des demandes.</p>
+                <div class="flex flex-col gap-2">
+                    <a class="tw-btn-primary w-full text-sm" href="etat-civil.php">Gérer les dossiers</a>
+                    <a class="tw-btn-outline w-full text-sm" href="../suivi-etat-civil.php">Voir le suivi public</a>
+                </div>
+            </article>
+
             <!-- Notifications -->
             <?php $notifActives = maire_feature_disponible_palier($palierEffectifCommune, 'notifications_email'); ?>
             <article class="tw-card p-6 <?php echo !$notifActives ? 'opacity-70' : ''; ?>">
@@ -532,9 +589,8 @@ if ($estCompteMairie) {
                     <a class="tw-btn-outline w-full text-sm" href="../standard.php">Espace agent (vue connectée)</a>
                     <a class="tw-btn-outline w-full text-sm" href="../index.php">Retour site public</a>
                     <?php if ($estConsoleSecrete): ?>
-                        <?php if (empty($_SESSION['abo_admin_csrf'])) { $_SESSION['abo_admin_csrf'] = bin2hex(random_bytes(32)); } ?>
                         <form method="POST" action="super-admin-exit.php">
-                            <input type="hidden" name="csrf" value="<?php echo htmlspecialchars($_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                             <button class="tw-btn-outline w-full text-sm" type="submit">Quitter la console secrète</button>
                         </form>
                     <?php endif; ?>

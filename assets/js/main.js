@@ -1,11 +1,13 @@
 const menuToggle = document.getElementById("menuToggle");
 const mainNav = document.getElementById("mainNav");
+const mobileMenu = document.getElementById("mobileMenu");
 const themeToggle = document.getElementById("themeToggle");
 const backToTop = document.getElementById("backToTop");
 const pageLoader = document.getElementById("pageLoader");
+const topbar = document.querySelector(".topbar");
 const storageThemeKey = "mairie-theme";
 
-if (menuToggle && mainNav) {
+if (menuToggle && mainNav && !mobileMenu) {
   menuToggle.addEventListener("click", () => {
     mainNav.classList.toggle("open");
   });
@@ -25,12 +27,65 @@ if (themeToggle) {
   });
 }
 
-window.addEventListener("load", () => {
+const mairePreloader = document.getElementById("mairePreloader");
+const maireSplashMinMs = 1100;
+const maireSplashStart = Date.now();
+
+const finishMaireSplash = () => {
+  if (!mairePreloader || mairePreloader.classList.contains("is-done")) {
+    return;
+  }
+  const wait = Math.max(0, maireSplashMinMs - (Date.now() - maireSplashStart));
+  window.setTimeout(() => {
+    mairePreloader.classList.add("is-leaving");
+    mairePreloader.setAttribute("aria-hidden", "true");
+    window.setTimeout(() => {
+      mairePreloader.classList.add("is-done");
+      document.body.classList.remove("maire-preloader-active");
+      document.body.classList.add("page-ready");
+    }, 820);
+  }, wait);
+};
+
+const finishDefaultLoader = () => {
   document.body.classList.add("page-ready");
   if (pageLoader) {
     pageLoader.classList.add("hidden");
   }
-});
+};
+
+const onPageReady = () => {
+  if (!mairePreloader) {
+    finishDefaultLoader();
+    return;
+  }
+  const splashLogo = mairePreloader.querySelector(".maire-preloader__logo");
+  const startSplashExit = () => finishMaireSplash();
+  if (!splashLogo) {
+    startSplashExit();
+    return;
+  }
+  if (splashLogo.complete && splashLogo.naturalWidth > 0) {
+    startSplashExit();
+    return;
+  }
+  splashLogo.addEventListener("load", startSplashExit, { once: true });
+  splashLogo.addEventListener("error", startSplashExit, { once: true });
+};
+
+const bootPageReady = () => onPageReady();
+
+if (document.readyState === "complete") {
+  bootPageReady();
+} else {
+  window.addEventListener("load", bootPageReady);
+}
+
+if (mairePreloader && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  mairePreloader.classList.add("is-leaving", "is-done");
+  document.body.classList.remove("maire-preloader-active");
+  document.body.classList.add("page-ready");
+}
 
 if (backToTop) {
   window.addEventListener("scroll", () => {
@@ -44,6 +99,14 @@ if (backToTop) {
   backToTop.addEventListener("click", () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
+}
+
+if (topbar) {
+  const syncTopbarState = () => {
+    topbar.classList.toggle("is-scrolled", window.scrollY > 12);
+  };
+  syncTopbarState();
+  window.addEventListener("scroll", syncTopbarState, { passive: true });
 }
 
 const revealTargets = document.querySelectorAll(
@@ -186,10 +249,12 @@ if (standardTabs.length > 0) {
   });
 }
 
-const counters = document.querySelectorAll("[data-counter]");
+const counters = document.querySelectorAll("[data-counter], .maire-counter[data-target]");
 if (counters.length > 0) {
   const animateCounter = (element) => {
-    const target = Number(element.getAttribute("data-counter") || 0);
+    const rawTarget = element.getAttribute("data-counter") || element.getAttribute("data-target") || "0";
+    const target = Number(rawTarget || 0);
+    const suffix = element.getAttribute("data-suffix") || "";
     let value = 0;
     const step = Math.max(1, Math.floor(target / 20));
     const timer = window.setInterval(() => {
@@ -198,7 +263,7 @@ if (counters.length > 0) {
         value = target;
         window.clearInterval(timer);
       }
-      element.textContent = String(value);
+      element.textContent = `${value}${suffix}`;
     }, 30);
   };
 
@@ -217,11 +282,17 @@ if (counters.length > 0) {
   counters.forEach((counter) => counterObserver.observe(counter));
 }
 
-const internalLinks = document.querySelectorAll('a[href$=".php"]');
+const internalLinks = document.querySelectorAll('a[href*=".php"]');
 internalLinks.forEach((link) => {
   link.addEventListener("click", (event) => {
     const href = link.getAttribute("href") || "";
-    if (href.startsWith("http")) return;
+    if (
+      href.startsWith("http") ||
+      href.startsWith("mailto:") ||
+      href.startsWith("tel:") ||
+      href.startsWith("#") ||
+      link.getAttribute("target") === "_blank"
+    ) return;
     if (event.ctrlKey || event.metaKey) return;
 
     event.preventDefault();

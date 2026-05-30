@@ -10,7 +10,9 @@ maire_page_sectorielle_render([
     'kicker' => 'Service municipal · Environnement',
     'titreH1' => 'Service',
     'titreHilight' => 'Hygiène',
+    'titreHilightClass' => 'text-emerald-200',
     'description' => 'Collecte, salubrité et prévention environnementale pour tous les quartiers de Rufisque-Est.',
+    'descriptionClass' => 'text-white',
     'heroGradient' => 'from-emerald-700 via-green-800 to-teal-900',
     'blobColor' => 'bg-emerald-400/30',
     'blobColor2' => 'bg-teal-400/30',
@@ -61,7 +63,7 @@ maire_page_sectorielle_render([
     <div class="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-12">
             <span class="maire-tag bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 mb-3">Comment ça marche</span>
-            <h2 class="text-3xl md:text-4xl font-black text-slate-900 dark:text-white">Parcours citoyen <span class="maire-text-gradient">simplifié</span></h2>
+            <h2 class="text-3xl md:text-4xl font-black text-slate-900 dark:text-white">Parcours citoyen <span class="text-emerald-600 dark:text-emerald-300">simplifié</span></h2>
         </div>
         <div class="grid md:grid-cols-3 gap-6 relative">
             <div class="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-gradient-to-r from-emerald-300 via-teal-400 to-emerald-300" aria-hidden="true"></div>

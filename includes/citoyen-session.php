@@ -34,27 +34,30 @@ function maire_ensure_citoyens_table(PDO $pdo): void
         )
     ");
 
-    // Amorçage du compte de démonstration (citoyen@demo.rufisque.sn / DemoCitoyen2026!)
-    // À supprimer ou désactiver en production.
-    try {
-        $n = (int) $pdo->query('SELECT COUNT(*) FROM citoyens')->fetchColumn();
-        if ($n === 0) {
-            $hash = password_hash('DemoCitoyen2026!', PASSWORD_DEFAULT);
-            $ins = $pdo->prepare('
-                INSERT INTO citoyens (email, mot_de_passe_hash, prenom, nom, telephone, quartier, actif)
-                VALUES (:email, :hash, :p, :n, :tel, :q, 1)
-            ');
-            $ins->execute([
-                'email' => 'citoyen@demo.rufisque.sn',
-                'hash' => $hash,
-                'p' => 'Aminata',
-                'n' => 'Diop',
-                'tel' => '+221 77 000 00 00',
-                'q' => 'Keury Souf',
-            ]);
+    // Amorçage du compte de démonstration UNIQUEMENT en environnement de développement.
+    // Identifiants : citoyen@demo.rufisque.sn / DemoCitoyen2026!
+    // En production, ne pas définir APP_ENV ou la mettre à "production".
+    if (function_exists('maire_is_dev_env') && maire_is_dev_env()) {
+        try {
+            $n = (int) $pdo->query('SELECT COUNT(*) FROM citoyens')->fetchColumn();
+            if ($n === 0) {
+                $hash = password_hash('DemoCitoyen2026!', PASSWORD_DEFAULT);
+                $ins = $pdo->prepare('
+                    INSERT INTO citoyens (email, mot_de_passe_hash, prenom, nom, telephone, quartier, actif)
+                    VALUES (:email, :hash, :p, :n, :tel, :q, 1)
+                ');
+                $ins->execute([
+                    'email' => 'citoyen@demo.rufisque.sn',
+                    'hash' => $hash,
+                    'p' => 'Aminata',
+                    'n' => 'Diop',
+                    'tel' => null,
+                    'q' => 'Keury Souf',
+                ]);
+            }
+        } catch (Throwable $e) {
+            // pas bloquant — l'inscription manuelle reste possible
         }
-    } catch (Throwable $e) {
-        // pas bloquant — l'inscription manuelle reste possible
     }
 }
 

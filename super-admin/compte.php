@@ -6,17 +6,14 @@ declare(strict_types=1);
  */
 require __DIR__ . '/../includes/super-admin-account-guard.php';
 
-if (empty($_SESSION['editeur_csrf'])) {
-    $_SESSION['editeur_csrf'] = bin2hex(random_bytes(32));
-}
+$superAdminCsrfScope = MAIRE_CSRF_SCOPE_SUPER_ADMIN;
 
 $flash = '';
 $flashType = 'success';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $csrf = (string) ($_POST['csrf'] ?? '');
-    if (!hash_equals((string) $_SESSION['editeur_csrf'], $csrf)) {
-        $flash = 'Jeton CSRF invalide.';
+    if (!maire_csrf_validate($superAdminCsrfScope)) {
+        $flash = maire_csrf_error_message();
         $flashType = 'danger';
     } else {
         $mdpActuel = (string) ($_POST['mdp_actuel'] ?? '');
@@ -81,7 +78,7 @@ require __DIR__ . '/../includes/header.php';
                 <?php endif; ?>
 
                 <form method="POST" action="compte.php" autocomplete="off">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['editeur_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field($superAdminCsrfScope); ?>
                     <label for="mdp_actuel" style="display:block;font-weight:600;margin-top:0.4rem;">Mot de passe actuel</label>
                     <input type="password" id="mdp_actuel" name="mdp_actuel" required style="width:100%;padding:0.5rem;border:1px solid #cbd5e1;border-radius:6px;">
 

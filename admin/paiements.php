@@ -23,16 +23,11 @@ if ($pdo !== null) {
     maire_ensure_paiements_table($pdo);
 }
 
-if (empty($_SESSION['abo_admin_csrf'])) {
-    $_SESSION['abo_admin_csrf'] = bin2hex(random_bytes(32));
-}
-
 $flash = '';
 $flashType = 'success';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
-    $csrf = (string) ($_POST['csrf'] ?? '');
-    if (!hash_equals((string) $_SESSION['abo_admin_csrf'], $csrf)) {
+    if (!maire_csrf_validate(MAIRE_CSRF_SCOPE_ADMIN)) {
         $flash = 'Jeton CSRF invalide.';
         $flashType = 'danger';
     } else {
@@ -193,14 +188,14 @@ require __DIR__ . '/../includes/header.php';
                                 <td style="padding:0.5rem;">
                                     <?php if (in_array($statut, ['initie', 'en_attente'], true)): ?>
                                         <form method="POST" action="paiements.php" style="display:inline-block;margin-bottom:0.2rem;">
-                                            <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                                            <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                             <input type="hidden" name="action" value="changer_statut">
                                             <input type="hidden" name="id" value="<?php echo (int) $p['id']; ?>">
                                             <input type="hidden" name="statut" value="paye">
                                             <button type="submit" class="btn btn-primary" style="padding:0.3rem 0.6rem;font-size:0.85rem;">✓ Marquer payé</button>
                                         </form>
                                         <form method="POST" action="paiements.php" style="display:inline-block;">
-                                            <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                                            <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                             <input type="hidden" name="action" value="changer_statut">
                                             <input type="hidden" name="id" value="<?php echo (int) $p['id']; ?>">
                                             <input type="hidden" name="statut" value="annule">
@@ -208,7 +203,7 @@ require __DIR__ . '/../includes/header.php';
                                         </form>
                                     <?php elseif ($statut === 'paye'): ?>
                                         <form method="POST" action="paiements.php" style="display:inline-block;" onsubmit="return confirm('Marquer ce paiement comme remboursé ?');">
-                                            <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                                            <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                             <input type="hidden" name="action" value="changer_statut">
                                             <input type="hidden" name="id" value="<?php echo (int) $p['id']; ?>">
                                             <input type="hidden" name="statut" value="rembourse">

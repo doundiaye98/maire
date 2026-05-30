@@ -28,13 +28,14 @@ $statutClasses = [
 ?>
 <main class="overflow-hidden">
     <!-- HERO -->
-    <section class="relative maire-hero-bg text-white py-24 maire-grain">
+    <section class="relative maire-hero-bg text-white py-24 lg:py-28 maire-grain overflow-hidden">
         <div class="absolute -top-32 -right-32 w-[35rem] h-[35rem] bg-red-500/25 maire-blob blur-3xl pointer-events-none" aria-hidden="true"></div>
         <div class="absolute -bottom-32 -left-32 w-[35rem] h-[35rem] bg-gold-400/25 maire-blob blur-3xl pointer-events-none" style="animation-delay: -10s;" aria-hidden="true"></div>
+        <div class="absolute inset-0 opacity-[0.08] pointer-events-none" style="background-image: linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px); background-size: 44px 44px;" aria-hidden="true"></div>
 
         <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
             <div class="max-w-3xl">
-                <span class="maire-tag bg-white/10 backdrop-blur-sm border border-white/20 text-gold-300 mb-5">
+                <span class="maire-section-kicker mb-5 !bg-white/12 !text-white !border-white/20">
                     <span class="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse"></span>
                     Démocratie locale · Transparence
                 </span>
@@ -55,7 +56,7 @@ $statutClasses = [
                 $st = (string) $session['statut'];
                 $stClass = $statutClasses[$st] ?? 'bg-slate-500 text-white';
             ?>
-                <article class="tw-card overflow-hidden">
+                <article class="maire-editorial-card overflow-hidden !p-0">
                     <div class="p-7 md:p-10">
                         <a href="conseil-municipal.php" class="inline-flex items-center gap-2 text-mairie-700 dark:text-mairie-300 hover:text-mairie-900 text-sm font-bold mb-5 transition-colors">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
@@ -129,7 +130,7 @@ $statutClasses = [
                     </div>
                 </article>
             <?php elseif (empty($sessions)): ?>
-                <div class="tw-card p-12 text-center">
+                <div class="maire-panel p-12 text-center">
                     <div class="text-6xl mb-4 opacity-40">🎬</div>
                     <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-2">Aucune session pour le moment</h2>
                     <p class="text-slate-600 dark:text-slate-400">Les prochaines sessions du conseil municipal seront annoncées ici.</p>

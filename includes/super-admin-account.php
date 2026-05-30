@@ -14,11 +14,12 @@ declare(strict_types=1);
 const MAIRE_EDITEUR_SESSION_TTL = 7200; // 2 h d'inactivité
 
 /**
- * Crée la table super_admins si elle n'existe pas (idempotent),
- * et amorce un compte de démonstration si la table est vide.
+ * Crée la table super_admins si elle n'existe pas (idempotent).
  *
- * Compte de démonstration : editeur@demo.rufisque.sn / DemoEditeur2026!
- * À supprimer ou désactiver lors du déploiement en production.
+ * En environnement de développement uniquement (APP_ENV=development|dev|local),
+ * amorce un compte de démonstration : editeur@demo.rufisque.sn / DemoEditeur2026!
+ * En production, l'administrateur doit créer manuellement le premier compte
+ * via le seed SQL ou un INSERT direct.
  */
 function maire_ensure_super_admins_table(PDO $pdo): void
 {
@@ -33,6 +34,10 @@ function maire_ensure_super_admins_table(PDO $pdo): void
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ");
+
+    if (!function_exists('maire_is_dev_env') || !maire_is_dev_env()) {
+        return;
+    }
 
     try {
         $n = (int) $pdo->query('SELECT COUNT(*) FROM super_admins')->fetchColumn();

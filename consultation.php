@@ -14,6 +14,9 @@ require_once __DIR__ . '/includes/super-admin-session.php';
 require_once __DIR__ . '/includes/feature-gates.php';
 require_once __DIR__ . '/includes/maire-rate-limit.php';
 require_once __DIR__ . '/includes/stats-temporelles.php';
+require_once __DIR__ . '/includes/csrf.php';
+
+$citoyenCsrfScope = MAIRE_CSRF_SCOPE_CITOYEN;
 
 $id = (int) ($_GET['id'] ?? 0);
 $consultation = $pdo !== null ? maire_load_consultation($pdo, $id) : null;
@@ -23,7 +26,7 @@ if ($consultation === null || (string) $consultation['statut'] === 'brouillon') 
     require __DIR__ . '/includes/header.php';
     ?>
     <main class="overflow-hidden">
-      <section class="relative maire-hero-bg text-white py-24 maire-grain">
+      <section class="relative maire-hero-bg text-white py-24 maire-grain overflow-hidden">
         <div class="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div class="text-7xl mb-4 opacity-80">🗳️</div>
           <h1 class="text-4xl md:text-5xl font-black mb-3">Consultation introuvable</h1>
@@ -46,10 +49,6 @@ $choix = $dejaVote ? maire_options_choisies_par_citoyen($pdo, $id, $idCit) : [];
 $flash = '';
 $flashType = 'success';
 
-if (empty($_SESSION['citoyen_csrf'])) {
-    $_SESSION['citoyen_csrf'] = bin2hex(random_bytes(32));
-}
-
 $ouverte = (string) $consultation['statut'] === 'ouverte';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
@@ -62,9 +61,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
         maire_render_paywall_page('votes_electroniques', $palierCommune, 'public');
         exit;
     }
-    $csrf = (string) ($_POST['csrf'] ?? '');
-    if (!hash_equals((string) $_SESSION['citoyen_csrf'], $csrf)) {
-        $flash = 'Jeton de sécurité invalide.';
+    if (!maire_csrf_validate($citoyenCsrfScope)) {
+        $flash = maire_csrf_error_message();
         $flashType = 'danger';
     } elseif (!maire_rate_limit_allow('vote', 5, 60)) {
         $flash = 'Trop de tentatives. Réessayez dans une minute.';
@@ -107,9 +105,10 @@ $badgeColor = $statutClasses[(string) $consultation['statut']] ?? 'bg-slate-500 
 ?>
 <main class="overflow-hidden">
     <!-- HERO -->
-    <section class="relative maire-hero-bg text-white py-24 maire-grain">
+    <section class="relative maire-hero-bg text-white py-24 lg:py-28 maire-grain overflow-hidden">
         <div class="absolute -top-32 -right-32 w-[35rem] h-[35rem] bg-fuchsia-500/25 maire-blob blur-3xl pointer-events-none" aria-hidden="true"></div>
         <div class="absolute -bottom-32 -left-32 w-[35rem] h-[35rem] bg-gold-400/25 maire-blob blur-3xl pointer-events-none" style="animation-delay: -10s;" aria-hidden="true"></div>
+        <div class="absolute inset-0 opacity-[0.08] pointer-events-none" style="background-image: linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px); background-size: 44px 44px;" aria-hidden="true"></div>
 
         <div class="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 relative z-10">
             <a href="consultations.php" class="inline-flex items-center gap-2 text-mairie-200 hover:text-white text-sm font-bold mb-6 transition-colors">
@@ -120,7 +119,7 @@ $badgeColor = $statutClasses[(string) $consultation['statut']] ?? 'bg-slate-500 
                 <span class="maire-tag <?php echo $badgeColor; ?>">
                     <?php echo htmlspecialchars(maire_libelle_statut_consultation((string) $consultation['statut']), ENT_QUOTES, 'UTF-8'); ?>
                 </span>
-                <span class="maire-tag bg-white/10 backdrop-blur-sm border border-white/20 text-gold-300">
+                <span class="maire-section-kicker !bg-white/12 !text-white !border-white/20">
                     <?php echo htmlspecialchars(maire_libelle_type_consultation((string) $consultation['type']), ENT_QUOTES, 'UTF-8'); ?>
                 </span>
             </div>
@@ -151,7 +150,7 @@ $badgeColor = $statutClasses[(string) $consultation['statut']] ?? 'bg-slate-500 
             <?php endif; ?>
 
             <?php if (!empty($consultation['description'])): ?>
-                <article class="tw-card p-7">
+                <article class="maire-panel p-7">
                     <h2 class="text-xl font-black text-slate-900 dark:text-white mb-3 flex items-center gap-2">
                         <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-mairie-700 to-mairie-900 text-white flex items-center justify-center">ℹ️</span>
                         Présentation
@@ -174,16 +173,16 @@ $badgeColor = $statutClasses[(string) $consultation['statut']] ?? 'bg-slate-500 
                         </div>
                     </article>
                 <?php else: ?>
-                    <article class="tw-card p-7">
+                    <article class="maire-form-shell">
                         <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-2 flex items-center gap-2"><span>🗳️</span> Votre vote</h2>
                         <?php $multi = (int) ($consultation['multi_choix'] ?? 0) === 1; ?>
                         <p class="text-sm text-slate-500 dark:text-slate-400 mb-5 italic"><?php echo $multi ? 'Plusieurs réponses possibles.' : 'Une seule réponse autorisée.'; ?></p>
                         <form method="POST" action="consultation.php?id=<?php echo (int) $id; ?>">
-                            <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['citoyen_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                            <?php echo maire_csrf_field($citoyenCsrfScope); ?>
                             <div class="grid gap-3">
                                 <?php foreach ($options as $o): ?>
                                     <label class="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-mairie-500 dark:hover:border-mairie-400 hover:bg-mairie-50 dark:hover:bg-mairie-950/30 cursor-pointer transition-all group">
-                                        <input type="<?php echo $multi ? 'checkbox' : 'radio'; ?>" name="option_id<?php echo $multi ? '[]' : ''; ?>" value="<?php echo (int) $o['id']; ?>" required class="w-5 h-5 accent-mairie-700">
+                                        <input type="<?php echo $multi ? 'checkbox' : 'radio'; ?>" name="option_id<?php echo $multi ? '[]' : ''; ?>" value="<?php echo (int) $o['id']; ?>" <?php echo $multi ? '' : 'required'; ?> class="w-5 h-5 accent-mairie-700">
                                         <span class="text-base font-bold text-slate-900 dark:text-slate-100 group-hover:text-mairie-700 dark:group-hover:text-mairie-300"><?php echo htmlspecialchars((string) $o['libelle'], ENT_QUOTES, 'UTF-8'); ?></span>
                                     </label>
                                 <?php endforeach; ?>
@@ -214,7 +213,7 @@ $badgeColor = $statutClasses[(string) $consultation['statut']] ?? 'bg-slate-500 
             <?php endif; ?>
 
             <?php if ($resultatsVisibles && $resultats !== null): ?>
-                <article class="tw-card p-7">
+                <article class="maire-panel p-7">
                     <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-1 flex items-center gap-2">
                         <span>📊</span> Résultats <span class="text-sm font-bold text-slate-500 dark:text-slate-400">(<?php echo $ouverte ? 'en cours' : 'définitifs'; ?>)</span>
                     </h2>
@@ -247,7 +246,7 @@ $badgeColor = $statutClasses[(string) $consultation['statut']] ?? 'bg-slate-500 
                     </div>
                 </article>
             <?php elseif ($ouverte && !$dejaVote && (int) ($consultation['resultats_publics'] ?? 0) === 1): ?>
-                <article class="tw-card p-5">
+                <article class="maire-panel p-5">
                     <p class="text-sm text-slate-500 dark:text-slate-400 italic flex items-center gap-2">
                         <span>🔒</span> Les résultats seront visibles après que vous aurez voté ou à la clôture de la consultation.
                     </p>

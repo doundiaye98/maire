@@ -9,6 +9,8 @@
 
     var endpoint = (document.currentScript && document.currentScript.dataset.endpoint) ||
         document.documentElement.dataset.chatbotEndpoint || null;
+    var csrfToken = (document.currentScript && document.currentScript.dataset.csrfToken) || "";
+    var csrfScope = (document.currentScript && document.currentScript.dataset.csrfScope) || "chatbot_ask";
     if (!endpoint) {
         // Pas d'endpoint configuré => widget désactivé (commune non éligible).
         return;
@@ -178,6 +180,10 @@
     function ask(question) {
         var form = new FormData();
         form.append("question", question || "Bonjour");
+        if (csrfToken) {
+            form.append("csrf_token", csrfToken);
+            form.append("csrf_scope", csrfScope);
+        }
         fetch(endpoint, { method: "POST", body: form, credentials: "same-origin" })
             .then(function (r) { return r.json().then(function (j) { return { status: r.status, json: j }; }); })
             .then(function (out) {

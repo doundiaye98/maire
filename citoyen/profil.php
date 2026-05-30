@@ -7,15 +7,16 @@ declare(strict_types=1);
  */
 require __DIR__ . '/../includes/citoyen-guard.php';
 require_once __DIR__ . '/../includes/signalements.php';
+require_once __DIR__ . '/../includes/audiences-maire.php';
 require_once __DIR__ . '/../includes/notifications.php';
+require_once __DIR__ . '/../includes/feature-gates.php';
 require_once __DIR__ . '/../includes/paiements.php';
+require_once __DIR__ . '/../includes/csrf.php';
+
+$citoyenCsrfScope = MAIRE_CSRF_SCOPE_CITOYEN;
 
 if ($pdo !== null) {
     maire_ensure_citoyens_notif_columns($pdo);
-}
-
-if (empty($_SESSION['citoyen_csrf'])) {
-    $_SESSION['citoyen_csrf'] = bin2hex(random_bytes(32));
 }
 
 $flash = '';
@@ -23,10 +24,9 @@ $flashType = 'success';
 $bienvenue = isset($_GET['bienvenue']) ? '1' : '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
-    $csrf = (string) ($_POST['csrf'] ?? '');
     $action = (string) ($_POST['action'] ?? '');
-    if (!hash_equals((string) $_SESSION['citoyen_csrf'], $csrf)) {
-        $flash = 'Jeton de sécurité invalide.';
+    if (!maire_csrf_validate($citoyenCsrfScope)) {
+        $flash = maire_csrf_error_message();
         $flashType = 'danger';
     } else {
         $idCit = maire_citoyen_current_id() ?? 0;
@@ -207,6 +207,22 @@ require __DIR__ . '/../includes/header.php';
             </div>
         </div>
 
+        <?php if ($pdo !== null && maire_feature_disponible($pdo, 'audiences_maire')): ?>
+        <div class="tw-card p-5 mb-6 bg-gradient-to-r from-gold-50 to-white dark:from-gold-950/20 dark:to-slate-800 flex flex-wrap items-center justify-between gap-4 border-gold-200 dark:border-gold-800/50">
+            <div class="flex items-center gap-3">
+                <span class="w-12 h-12 rounded-xl bg-gradient-to-br from-mairie-700 to-mairie-900 text-white flex items-center justify-center text-2xl shadow-md">🤝</span>
+                <div>
+                    <p class="font-bold text-slate-900 dark:text-white">Audience avec le Maire</p>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">Demande en présentiel ou en visioconférence</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <a class="tw-btn-primary text-sm" href="../audiences-maire.php">Nouvelle demande</a>
+                <a class="tw-btn-outline text-sm" href="audiences.php">Mes audiences</a>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Bandeau CTA signalement -->
         <div class="tw-card p-5 mb-6 bg-gradient-to-r from-mairie-50 to-white dark:from-mairie-900/30 dark:to-slate-800 flex flex-wrap items-center justify-between gap-4 border-mairie-200 dark:border-mairie-700">
             <div class="flex items-center gap-3">
@@ -275,7 +291,7 @@ require __DIR__ . '/../includes/header.php';
                     <h2 class="text-lg font-bold text-slate-900 dark:text-white">Mes informations</h2>
                 </div>
                 <form method="POST" action="profil.php" class="space-y-3">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['citoyen_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field($citoyenCsrfScope); ?>
                     <input type="hidden" name="action" value="maj_profil">
                     <div class="grid grid-cols-2 gap-3">
                         <div>
@@ -320,7 +336,7 @@ require __DIR__ . '/../includes/header.php';
                 </div>
                 <p class="text-sm text-slate-600 dark:text-slate-400 mb-4">Comment la mairie peut vous contacter en cas d'urgence ou d'information importante.</p>
                 <form method="POST" action="profil.php" class="space-y-3">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['citoyen_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field($citoyenCsrfScope); ?>
                     <input type="hidden" name="action" value="maj_notif">
                     <label class="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer transition-colors">
                         <input type="checkbox" name="accepte_email" value="1"
@@ -405,7 +421,7 @@ require __DIR__ . '/../includes/header.php';
                     <h2 class="text-lg font-bold text-slate-900 dark:text-white">Changer mon mot de passe</h2>
                 </div>
                 <form method="POST" action="profil.php" autocomplete="off" class="space-y-3">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['citoyen_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field($citoyenCsrfScope); ?>
                     <input type="hidden" name="action" value="maj_mdp">
                     <div>
                         <label for="mdp_actuel" class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Mot de passe actuel</label>

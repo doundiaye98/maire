@@ -17,6 +17,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/chatbot.php';
 require_once __DIR__ . '/includes/maire-rate-limit.php';
+require_once __DIR__ . '/includes/csrf.php';
 require_once __DIR__ . '/includes/citoyen-session.php';
 require_once __DIR__ . '/includes/super-admin-session.php';
 require_once __DIR__ . '/includes/feature-gates.php';
@@ -48,6 +49,8 @@ if (!maire_rate_limit_allow('chatbot', 30, 60)) {
     echo json_encode(['error' => 'Trop de questions. Patientez une minute.']);
     exit;
 }
+
+maire_csrf_validate_json(MAIRE_CSRF_SCOPE_CHATBOT);
 
 $question = trim((string) ($_POST['question'] ?? ''));
 if ($question === '' || mb_strlen($question) > 500) {

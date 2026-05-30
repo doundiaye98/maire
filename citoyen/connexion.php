@@ -13,11 +13,9 @@ require_once __DIR__ . '/../includes/site-paths.php';
 require_once __DIR__ . '/../includes/citoyen-session.php';
 require_once __DIR__ . '/../includes/maire-rate-limit.php';
 require_once __DIR__ . '/../includes/feature-gates.php';
+require_once __DIR__ . '/../includes/csrf.php';
 
-if (maire_citoyen_session_valid()) {
-    header('Location: profil.php', true, 302);
-    exit;
-}
+$citoyenCsrfScope = MAIRE_CSRF_SCOPE_CITOYEN;
 
 if ($pdo !== null && !maire_feature_disponible($pdo, 'comptes_citoyens')) {
     $palierCommune = maire_palier_commune_actuel($pdo);
@@ -29,8 +27,43 @@ $message = '';
 $messageType = 'info';
 $emailSaisi = '';
 
-if (empty($_SESSION['citoyen_csrf'])) {
-    $_SESSION['citoyen_csrf'] = bin2hex(random_bytes(32));
+$apresConnexion = trim((string) ($_GET['apres'] ?? ($_POST['apres'] ?? '')));
+
+/**
+ * Empêche les redirections externes tout en reprenant les parcours internes.
+ */
+function maire_citoyen_redirect_target(string $apresConnexion): ?string
+{
+    $apresConnexion = str_replace('\\', '/', trim($apresConnexion));
+    if ($apresConnexion === '') {
+        return null;
+    }
+    if (preg_match('#^(?:[a-z][a-z0-9+\-.]*:)?//#i', $apresConnexion) === 1) {
+        return null;
+    }
+
+    $apresConnexion = ltrim($apresConnexion, '/');
+    [$path, $query] = array_pad(explode('?', $apresConnexion, 2), 2, '');
+
+    if ($path === 'signaler' || $path === 'signaler.php') {
+        $path = 'citoyen/signaler.php';
+    }
+    if (str_contains($path, '..') || $path === '' || preg_match('#^[A-Za-z0-9/_\-.]+$#', $path) !== 1) {
+        return null;
+    }
+    if ($query !== '' && preg_match('#^[A-Za-z0-9=&_%\-\.\[\]]+$#', $query) !== 1) {
+        return null;
+    }
+
+    $target = $path . ($query !== '' ? '?' . $query : '');
+    return maire_root_url($target);
+}
+
+$redirectTarget = maire_citoyen_redirect_target($apresConnexion) ?? maire_citoyen_url('profil.php');
+
+if (maire_citoyen_session_valid()) {
+    header('Location: ' . $redirectTarget, true, 302);
+    exit;
 }
 
 $besoin = trim((string) ($_GET['besoin'] ?? ''));
@@ -54,9 +87,8 @@ switch ($besoin) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
-    $csrf = (string) ($_POST['csrf'] ?? '');
-    if (!hash_equals((string) $_SESSION['citoyen_csrf'], $csrf)) {
-        $message = 'Jeton de sécurité invalide. Recharge la page.';
+    if (!maire_csrf_validate($citoyenCsrfScope)) {
+        $message = maire_csrf_error_message();
         $messageType = 'danger';
     } elseif (!maire_rate_limit_allow('citoyen_login', 120, 180)) {
         $message = 'Trop de tentatives de connexion. Réessaie dans quelques minutes.';
@@ -71,12 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
             $message = 'Identifiants incorrects ou compte inactif.';
             $messageType = 'danger';
         } else {
-            $apres = (string) ($_GET['apres'] ?? ($_POST['apres'] ?? ''));
-            if ($apres === 'signaler') {
-                header('Location: signaler.php', true, 302);
-            } else {
-                header('Location: profil.php', true, 302);
-            }
+            header('Location: ' . $redirectTarget, true, 302);
             exit;
         }
     }
@@ -96,14 +123,15 @@ $alertIcons = ['danger' => '⚠️', 'success' => '✅', 'warning' => '⚠️', 
 ?>
 <main class="overflow-hidden">
     <!-- HERO + FORM (split layout) -->
-    <section class="relative maire-hero-bg text-white min-h-[80vh] flex items-center maire-grain">
+    <section class="relative maire-hero-bg text-white min-h-[80vh] flex items-center maire-grain overflow-hidden">
         <div class="absolute -top-32 -right-32 w-[35rem] h-[35rem] bg-gold-500/30 maire-blob blur-3xl pointer-events-none" aria-hidden="true"></div>
         <div class="absolute -bottom-32 -left-32 w-[35rem] h-[35rem] bg-emerald-400/30 maire-blob blur-3xl pointer-events-none" style="animation-delay: -10s;" aria-hidden="true"></div>
+        <div class="absolute inset-0 opacity-[0.08] pointer-events-none" style="background-image: linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px); background-size: 44px 44px;" aria-hidden="true"></div>
 
         <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 relative z-10 grid lg:grid-cols-2 gap-12 items-center">
             <!-- LEFT : pitch -->
             <div>
-                <span class="maire-tag bg-white/10 backdrop-blur-sm border border-white/20 text-gold-300 mb-5">
+                <span class="maire-section-kicker mb-5 !bg-white/12 !text-white !border-white/20">
                     <span class="w-1.5 h-1.5 rounded-full bg-gold-400 animate-pulse"></span>
                     Espace citoyen
                 </span>
@@ -123,7 +151,7 @@ $alertIcons = ['danger' => '⚠️', 'success' => '✅', 'warning' => '⚠️', 
 
             <!-- RIGHT : form -->
             <div class="w-full max-w-md mx-auto lg:ml-auto">
-                <article class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-8 md:p-10">
+                <article class="maire-form-shell shadow-luxury">
                     <div class="mb-5">
                         <span class="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-mairie-700 to-mairie-900 text-white items-center justify-center text-2xl shadow-md mb-4">🔐</span>
                         <h2 class="text-2xl font-black text-slate-900 dark:text-white">Connexion</h2>
@@ -140,16 +168,16 @@ $alertIcons = ['danger' => '⚠️', 'success' => '✅', 'warning' => '⚠️', 
                         </div>
                     <?php endif; ?>
 
-                    <form method="POST" action="connexion.php<?php echo isset($_GET['apres']) ? '?apres=' . urlencode((string) $_GET['apres']) : ''; ?>" autocomplete="on" class="space-y-4">
-                        <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['citoyen_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <form method="POST" action="connexion.php<?php echo $apresConnexion !== '' ? '?apres=' . urlencode($apresConnexion) : ''; ?>" autocomplete="on" class="space-y-4">
+                        <?php echo maire_csrf_field($citoyenCsrfScope); ?>
 
                         <div>
                             <label for="email" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Adresse e-mail</label>
-                            <input type="email" id="email" name="email" required value="<?php echo htmlspecialchars($emailSaisi, ENT_QUOTES, 'UTF-8'); ?>" autocomplete="username" class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+                            <input type="email" id="email" name="email" required value="<?php echo htmlspecialchars($emailSaisi, ENT_QUOTES, 'UTF-8'); ?>" autocomplete="username" class="tw-input">
                         </div>
                         <div>
                             <label for="mot_de_passe" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Mot de passe</label>
-                            <input type="password" id="mot_de_passe" name="mot_de_passe" required autocomplete="current-password" class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+                            <input type="password" id="mot_de_passe" name="mot_de_passe" required autocomplete="current-password" class="tw-input">
                         </div>
 
                         <button type="submit" class="tw-btn-primary w-full justify-center">
@@ -168,11 +196,13 @@ $alertIcons = ['danger' => '⚠️', 'success' => '✅', 'warning' => '⚠️', 
                         ✨ Créer un compte habitant
                     </a>
 
+                    <?php if (function_exists('maire_is_dev_env') && maire_is_dev_env()): ?>
                     <div class="mt-6 p-3 rounded-xl bg-mairie-50 dark:bg-mairie-950/30 border border-mairie-200 dark:border-mairie-800 text-xs text-mairie-800 dark:text-mairie-200">
-                        <p class="font-bold mb-1">🧪 Compte démo :</p>
+                        <p class="font-bold mb-1">🧪 Compte démo (mode dev uniquement) :</p>
                         <p>E-mail : <code class="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 font-mono">citoyen@demo.rufisque.sn</code></p>
                         <p>Mot de passe : <code class="px-1.5 py-0.5 rounded bg-white dark:bg-slate-800 font-mono">DemoCitoyen2026!</code></p>
                     </div>
+                    <?php endif; ?>
 
                     <p class="text-xs text-center text-slate-500 dark:text-slate-400 mt-4">
                         Vous êtes agent de la mairie ? <a class="font-bold text-mairie-700 dark:text-mairie-300 hover:underline" href="../abonnement.php">Connexion agent</a>

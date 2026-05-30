@@ -15,24 +15,16 @@ require __DIR__ . '/../includes/super-admin-account-guard.php';
 require_once __DIR__ . '/../includes/commune-abonnement.php';
 require_once __DIR__ . '/../includes/compte-mairie.php';
 
-if (empty($_SESSION['editeur_csrf'])) {
-    $_SESSION['editeur_csrf'] = bin2hex(random_bytes(32));
-}
+$superAdminCsrfScope = MAIRE_CSRF_SCOPE_SUPER_ADMIN;
 
 $flash = '';
 $flashType = 'success';
 
-function maire_editeur_verifier_csrf(string $jeton): bool
-{
-    return isset($_SESSION['editeur_csrf']) && hash_equals((string) $_SESSION['editeur_csrf'], $jeton);
-}
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $csrf = (string) ($_POST['csrf'] ?? '');
     $action = (string) ($_POST['action'] ?? '');
 
-    if (!maire_editeur_verifier_csrf($csrf)) {
-        $flash = 'Jeton CSRF invalide, action ignorée.';
+    if (!maire_csrf_validate($superAdminCsrfScope)) {
+        $flash = maire_csrf_error_message();
         $flashType = 'danger';
     } else {
         try {
@@ -251,7 +243,7 @@ require __DIR__ . '/../includes/header.php';
                 <h2>Suspendre le service</h2>
                 <p>Bloque immédiatement l’accès aux modules payants pour la commune (compte mairie + agents). Action réversible (réactivation).</p>
                 <form method="POST" action="abonnement.php#suspendre">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['editeur_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field($superAdminCsrfScope); ?>
                     <input type="hidden" name="action" value="suspendre">
                     <label for="motif" style="display:block;font-weight:600;margin-top:0.4rem;">Motif (facultatif)</label>
                     <input type="text" id="motif" name="motif" maxlength="200" placeholder="Ex : impayé janvier 2026" style="width:100%;padding:0.5rem;border:1px solid #cbd5e1;border-radius:6px;">
@@ -264,7 +256,7 @@ require __DIR__ . '/../includes/header.php';
                 <h3 style="margin-top:0;">Réactiver</h3>
                 <p style="color:#64748b;font-size:0.9rem;">Lève le drapeau de suspension. L’abonnement redeviendra actif si la date de fin n’est pas dépassée.</p>
                 <form method="POST" action="abonnement.php">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['editeur_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field($superAdminCsrfScope); ?>
                     <input type="hidden" name="action" value="reactiver">
                     <div class="detail-actions">
                         <button type="submit" class="btn btn-outline-dark" <?php echo (!$suspenduPlateforme && $actif === 1) ? 'disabled' : ''; ?>>Réactiver le service</button>
@@ -275,7 +267,7 @@ require __DIR__ . '/../includes/header.php';
                 <h3 style="margin-top:0;">Forcer une expiration immédiate</h3>
                 <p style="color:#64748b;font-size:0.9rem;">Met la date_fin à hier et désactive l’abonnement. Utile pour matérialiser un non-renouvellement.</p>
                 <form method="POST" action="abonnement.php">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['editeur_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field($superAdminCsrfScope); ?>
                     <input type="hidden" name="action" value="forcer_expiration">
                     <div class="detail-actions">
                         <button type="submit" class="btn btn-outline-dark" onclick="return confirm('Forcer l’expiration de l’abonnement communal ?');">Forcer l’expiration</button>
@@ -287,7 +279,7 @@ require __DIR__ . '/../includes/header.php';
                 <h2>Prolonger l’échéance</h2>
                 <p>Ajouter des jours à la date de fin. Pratique pour offrir un délai de paiement ou un mois supplémentaire.</p>
                 <form method="POST" action="abonnement.php#prolonger">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['editeur_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field($superAdminCsrfScope); ?>
                     <input type="hidden" name="action" value="prolonger">
                     <label for="jours" style="display:block;font-weight:600;margin-top:0.4rem;">Jours à ajouter</label>
                     <input type="number" id="jours" name="jours" min="1" max="1825" value="30" required style="width:100%;padding:0.5rem;border:1px solid #cbd5e1;border-radius:6px;">
@@ -300,7 +292,7 @@ require __DIR__ . '/../includes/header.php';
             <article class="card" id="plan">
                 <h2>Changer le palier souscrit</h2>
                 <form method="POST" action="abonnement.php#plan">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['editeur_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field($superAdminCsrfScope); ?>
                     <input type="hidden" name="action" value="changer_plan">
                     <label for="plan" style="display:block;font-weight:600;margin-top:0.4rem;">Nouveau plan</label>
                     <select id="plan" name="plan" required style="width:100%;padding:0.5rem;border:1px solid #cbd5e1;border-radius:6px;">
@@ -317,7 +309,7 @@ require __DIR__ . '/../includes/header.php';
             <article class="card" id="auto">
                 <h2>Renouvellement automatique</h2>
                 <form method="POST" action="abonnement.php#auto">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['editeur_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field($superAdminCsrfScope); ?>
                     <input type="hidden" name="action" value="toggle_auto_renew">
                     <label style="display:block;margin-top:0.4rem;">
                         <input type="checkbox" name="auto_renew" value="1" <?php echo $autoRenew ? 'checked' : ''; ?>>

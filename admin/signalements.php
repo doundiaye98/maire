@@ -17,16 +17,11 @@ if ($pdo !== null && !maire_super_admin_session_valid() && !maire_feature_dispon
     exit;
 }
 
-if (empty($_SESSION['abo_admin_csrf'])) {
-    $_SESSION['abo_admin_csrf'] = bin2hex(random_bytes(32));
-}
-
 $flash = '';
 $flashType = 'success';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
-    $csrf = (string) ($_POST['csrf'] ?? '');
-    if (!hash_equals((string) $_SESSION['abo_admin_csrf'], $csrf)) {
+    if (!maire_csrf_validate(MAIRE_CSRF_SCOPE_ADMIN)) {
         $flash = 'Jeton CSRF invalide.';
         $flashType = 'danger';
     } else {
@@ -204,7 +199,7 @@ require __DIR__ . '/../includes/header.php';
                             <hr style="margin:0.8rem 0;border:none;border-top:1px dashed #cbd5e1;">
 
                             <form method="POST" action="signalements.php" style="display:grid;gap:0.5rem;">
-                                <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                                <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                 <input type="hidden" name="id" value="<?php echo (int) $s['id']; ?>">
                                 <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
                                     <label for="statut_<?php echo (int) $s['id']; ?>" style="font-weight:600;">Statut</label>

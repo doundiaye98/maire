@@ -15,6 +15,7 @@ declare(strict_types=1);
  */
 
 require_once __DIR__ . '/sms-provider.php';
+require_once __DIR__ . '/mailer.php';
 
 const MAIRE_NOTIFICATIONS_CATEGORIES = [
     'urgence'    => '🚨 Urgence',
@@ -174,7 +175,8 @@ function maire_selectionner_destinataires(PDO $pdo, string $canal, ?string $quar
 }
 
 /**
- * Envoie un email (mail() PHP), avec fallback log fichier en cas d'échec.
+ * Envoie un email. Utilise SMTP authentifié si MAIL_HOST/USERNAME/PASSWORD
+ * sont définis dans le .env, sinon fallback sur mail() natif.
  */
 function maire_envoyer_email(string $to, string $sujet, string $message, ?string &$errMsg = null): bool
 {
@@ -182,32 +184,16 @@ function maire_envoyer_email(string $to, string $sujet, string $message, ?string
         $errMsg = 'Email invalide';
         return false;
     }
-    $from = MAIRE_NOTIFICATIONS_EMAIL_FROM;
     $fromName = MAIRE_NOTIFICATIONS_EMAIL_FROM_NAME;
-    $headers = [
-        'MIME-Version: 1.0',
-        'Content-Type: text/plain; charset=UTF-8',
-        'From: ' . $fromName . ' <' . $from . '>',
-        'Reply-To: ' . $from,
-        'X-Mailer: Maire-Notifications/1.0',
-    ];
     $body = $message . "\n\n--\n" . $fromName . "\nNe répondez pas à cet email automatique.";
-    $sujetEnc = '=?UTF-8?B?' . base64_encode($sujet) . '?=';
 
-    $ok = false;
-    if (function_exists('mail')) {
-        try {
-            $ok = @mail($to, $sujetEnc, $body, implode("\r\n", $headers));
-        } catch (Throwable $e) {
-            $errMsg = $e->getMessage();
-            $ok = false;
-        }
-    }
-    // Fallback log fichier (utile en dev / WAMP sans SMTP)
-    maire_log_notification('email', $to, $sujet, $message, $ok ? 'ok' : 'mail_function_failed');
-    if (!$ok && $errMsg === null) {
-        $errMsg = 'mail() a échoué (probablement pas de SMTP configuré sur ce serveur)';
-    }
+    $ok = maire_mailer_send($to, $sujet, $body, $errMsg, [
+        'from_email' => MAIRE_NOTIFICATIONS_EMAIL_FROM,
+        'from_name' => $fromName,
+        'reply_to' => MAIRE_NOTIFICATIONS_EMAIL_FROM,
+    ]);
+
+    maire_log_notification('email', $to, $sujet, $message, $ok ? 'ok' : 'mailer_failed');
     return $ok;
 }
 

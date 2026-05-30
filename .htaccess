@@ -1,0 +1,114 @@
+# =====================================================================
+#  Mairie de Rufisque-Est — .htaccess racine
+#  Apache 2.4+ (mod_authz_core, mod_rewrite, mod_headers)
+# =====================================================================
+
+# Options globales : désactiver l'indexation et le suivi de symlinks dangereux
+Options -Indexes -MultiViews +FollowSymLinks
+
+# Charset par défaut
+AddDefaultCharset UTF-8
+
+# Masquer la signature serveur dans les pages d'erreur
+ServerSignature Off
+
+# =====================================================================
+#  1) BLOCAGE TOTAL DES FICHIERS SENSIBLES
+# =====================================================================
+<IfModule mod_authz_core.c>
+    # Fichiers de configuration / source / dépendances
+    <FilesMatch "^\.(env|env\..*|git.*|htaccess|htpasswd|gitignore|gitattributes)$">
+        Require all denied
+    </FilesMatch>
+    <FilesMatch "^(composer\.json|composer\.lock|package\.json|package-lock\.json|phpunit\.xml|tailwind\.config\.js|postcss\.config\.js|README\.md|CONTRIBUTING\.md)$">
+        Require all denied
+    </FilesMatch>
+
+    # Extensions sensibles (backups, source maps, dumps, logs, etc.)
+    <FilesMatch "\.(bak|sql|sql\.gz|sql\.bz2|backup|swp|swo|tmp|orig|rej|log|ini|yml|yaml|lock|dist|sample|example|psd|ai|map)$">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+# =====================================================================
+#  2) BLOCAGE DE DOSSIERS ENTIERS (database/, tests/, logs/, src/, etc.)
+# =====================================================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Bloquer accès direct aux dossiers de code interne et fichiers privés
+    RewriteRule ^(database|tests|migrations|bin|src|vendor|node_modules|logs|\.git|\.idea|\.vscode)(/|$) - [F,L,NC]
+
+    # includes/ et config/ ne doivent jamais être appelés directement en HTTP
+    RewriteRule ^includes(/|$) - [F,L,NC]
+    RewriteRule ^config(/|$) - [F,L,NC]
+
+    # Source CSS Tailwind non compilé
+    RewriteRule ^assets/css/input\.css$ - [F,L,NC]
+</IfModule>
+
+# =====================================================================
+#  3) HEADERS HTTP DE SÉCURITÉ (mod_headers)
+# =====================================================================
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "geolocation=(self), camera=(), microphone=(), payment=(self), usb=(), interest-cohort=()"
+
+    # HSTS : décommenter UNIQUEMENT après installation d'un certificat SSL valide
+    # Header always set Strict-Transport-Security "max-age=15552000; includeSubDomains" env=HTTPS
+
+    # Pas de cache pour les pages PHP (cookies de session)
+    <FilesMatch "\.php$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+    </FilesMatch>
+
+    # Cache long pour assets statiques compilés (images, fonts, CSS, JS)
+    <FilesMatch "\.(css|js|woff2|woff|ttf|otf|eot|jpg|jpeg|png|gif|svg|webp|avif|ico)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+
+    # Cache moyen pour vidéos (1 mois — peuvent être mises à jour)
+    <FilesMatch "\.(mp4|mov|webm|ogg|m4v)$">
+        Header set Cache-Control "public, max-age=2592000"
+        Header set Accept-Ranges "bytes"
+    </FilesMatch>
+
+    # Supprimer X-Powered-By (cache la version PHP)
+    Header unset X-Powered-By
+    Header always unset X-Powered-By
+</IfModule>
+
+# =====================================================================
+#  4) COMPRESSION GZIP (mod_deflate)
+# =====================================================================
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml application/javascript application/json application/xml image/svg+xml application/rss+xml
+</IfModule>
+
+# =====================================================================
+#  5) MIME types modernes
+# =====================================================================
+<IfModule mod_mime.c>
+    AddType image/webp .webp
+    AddType image/avif .avif
+    AddType font/woff2 .woff2
+    AddType application/manifest+json .webmanifest
+    AddType video/mp4 .mp4 .m4v
+    AddType video/quicktime .mov
+    AddType video/webm .webm
+    AddType video/ogg .ogv
+</IfModule>
+
+# =====================================================================
+#  6) REDIRECTION HTTPS (à activer après installation SSL en prod)
+# =====================================================================
+# Décommenter UNIQUEMENT après vérification que HTTPS est opérationnel :
+# <IfModule mod_rewrite.c>
+#     RewriteCond %{HTTPS} off
+#     RewriteCond %{HTTP_HOST} !^localhost [NC]
+#     RewriteCond %{HTTP_HOST} !^127\.0\.0\.1 [NC]
+#     RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# </IfModule>

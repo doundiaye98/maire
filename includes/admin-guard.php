@@ -8,6 +8,8 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/super-admin-session.php';
 require_once __DIR__ . '/site-paths.php';
+require_once __DIR__ . '/csrf.php';
+maire_csrf_token(MAIRE_CSRF_SCOPE_ADMIN);
 
 if (maire_super_admin_session_valid()) {
     return;

@@ -1,0 +1,34 @@
+{
+    "name": "maire-rufisque-est/platform",
+    "description": "Plateforme SaaS de gestion communale pour les mairies sénégalaises — Rufisque-Est et autres.",
+    "type": "project",
+    "license": "proprietary",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": ">=8.1",
+        "ext-pdo": "*",
+        "ext-mbstring": "*",
+        "ext-json": "*",
+        "ext-fileinfo": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5"
+    },
+    "autoload": {
+        "files": [
+            "includes/logger.php",
+            "includes/migrations.php"
+        ]
+    },
+    "scripts": {
+        "test": "phpunit --testdox",
+        "test:unit": "phpunit --testdox --testsuite=Unit",
+        "migrate": "php bin/migrate.php up",
+        "migrate:status": "php bin/migrate.php status",
+        "migrate:down": "php bin/migrate.php down"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

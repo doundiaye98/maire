@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" role="img" aria-label="D�couvrir Rufisque-Est en vid�o">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#03241e"/>
+      <stop offset="50%" stop-color="#0a3c34"/>
+      <stop offset="100%" stop-color="#1e5f48"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fcd34d"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <filter id="softShadow">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2"/>
+      <feColorMatrix values="0 0 0 0 1   0 0 0 0 1   0 0 0 0 1   0 0 0 0.05 0"/>
+    </filter>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <rect width="1920" height="1080" fill="url(#glow)"/>
+
+  <!-- Blobs d�coratifs -->
+  <circle cx="200" cy="180" r="320" fill="#fbbf24" opacity="0.08"/>
+  <circle cx="1750" cy="900" r="280" fill="#5db088" opacity="0.15"/>
+  <circle cx="1000" cy="540" r="220" fill="#1e5f48" opacity="0.18"/>
+
+  <!-- Silhouette h�tel de ville -->
+  <g transform="translate(960, 480)" opacity="0.18">
+    <rect x="-180" y="-40" width="360" height="240" fill="#fbbf24"/>
+    <polygon points="-210,-40 0,-140 210,-40" fill="#fbbf24"/>
+    <rect x="-150" y="30" width="42" height="120" fill="#03241e" opacity="0.6"/>
+    <rect x="-21" y="30" width="42" height="120" fill="#03241e" opacity="0.6"/>
+    <rect x="108" y="30" width="42" height="120" fill="#03241e" opacity="0.6"/>
+    <rect x="-21" y="-90" width="42" height="60" fill="#03241e" opacity="0.6"/>
+  </g>
+
+  <!-- Bouton "play" central avec halo -->
+  <g transform="translate(960, 480)">
+    <circle r="180" fill="rgba(255, 255, 255, 0.06)" filter="url(#softShadow)"/>
+    <circle r="140" fill="rgba(255, 255, 255, 0.1)"/>
+    <circle r="110" fill="url(#gold)"/>
+    <polygon points="-35,-55 -35,55 55,0" fill="#03241e"/>
+  </g>
+
+  <!-- Tag en haut -->
+  <g transform="translate(960, 140)">
+    <rect x="-220" y="-30" width="440" height="60" rx="30" fill="rgba(251,191,36,0.18)" stroke="rgba(251,191,36,0.5)" stroke-width="2"/>
+    <text x="0" y="8" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="22" font-weight="900" fill="#fcd34d" text-anchor="middle" letter-spacing="5">PR�SENTATION OFFICIELLE</text>
+  </g>
+
+  <!-- Titre principal -->
+  <text x="960" y="820" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="88" font-weight="900" fill="#ffffff" text-anchor="middle">D�couvrez</text>
+  <text x="960" y="930" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="100" font-weight="900" fill="url(#gold)" text-anchor="middle">Rufisque-Est</text>
+
+  <!-- Sous-titre -->
+  <text x="960" y="1010" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="26" font-weight="500" fill="#9dc7b6" text-anchor="middle" letter-spacing="2">Commune dynamique, communaut� engag�e, avenir partag�</text>
+
+  <!-- Grain subtil -->
+  <rect width="1920" height="1080" filter="url(#grain)" opacity="0.2"/>
+
+  <!-- Cadre or fin -->
+  <rect x="6" y="6" width="1908" height="1068" fill="none" stroke="url(#gold)" stroke-width="3" opacity="0.5"/>
+</svg>

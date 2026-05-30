@@ -1,0 +1,364 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+ * Composants partagés Tailwind — réutilisables sur toutes les
+ * pages du site « Mairie de Rufisque-Est ».
+ *
+ * IMPORTANT : ces classes étaient auparavant définies dans une
+ * balise <style> inline du header.php (warning Tailwind « not for
+ * production »). Elles sont désormais bundlées dans le build.
+ * ============================================================ */
+
+@layer components {
+  .tw-card {
+    @apply bg-white dark:bg-slate-800 rounded-2xl shadow-card hover:shadow-card-hover transition-all duration-300 border border-slate-200/60 dark:border-slate-700/60;
+  }
+  .tw-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-mairie-800 hover:bg-mairie-700 text-white font-semibold px-5 py-2.5 rounded-xl shadow-glow transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0;
+  }
+  .tw-btn-outline {
+    @apply inline-flex items-center justify-center gap-2 bg-white dark:bg-slate-800 hover:bg-mairie-50 dark:hover:bg-slate-700 text-mairie-800 dark:text-mairie-200 font-semibold px-5 py-2.5 rounded-xl border-2 border-mairie-800 dark:border-mairie-400 transition-all duration-200;
+  }
+  .tw-btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 text-mairie-800 dark:text-mairie-200 hover:bg-mairie-50 dark:hover:bg-slate-800 font-semibold px-4 py-2 rounded-lg transition-colors;
+  }
+  .tw-badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full;
+  }
+  .tw-input {
+    @apply w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-mairie-500 focus:border-transparent transition-all;
+  }
+  .tw-glass {
+    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-white/30 dark:border-white/10;
+  }
+
+  /** Cartes de choix (radios masqués — évite le style global width:100% sur input) */
+  .maire-choice-card {
+    @apply relative block cursor-pointer;
+  }
+  .maire-choice-card input[type="radio"] {
+    @apply sr-only;
+  }
+  .maire-choice-card__body {
+    @apply flex flex-col gap-1 rounded-2xl border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800/80 p-4 h-full transition-all duration-200;
+  }
+  .maire-choice-card input:checked + .maire-choice-card__body {
+    @apply border-mairie-700 dark:border-mairie-400 bg-mairie-50 dark:bg-mairie-900/40 shadow-md ring-2 ring-mairie-500/25;
+  }
+  .maire-choice-card input:disabled + .maire-choice-card__body {
+    @apply opacity-50 cursor-not-allowed;
+  }
+  .maire-choice-card:hover input:not(:disabled) + .maire-choice-card__body {
+    @apply border-mairie-400 dark:border-mairie-500;
+  }
+  .maire-slot-card input[type="radio"] {
+    @apply sr-only;
+  }
+  .maire-slot-card__body {
+    @apply flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-600 px-3 py-2.5 text-sm transition-colors;
+  }
+  .maire-slot-card input:checked + .maire-slot-card__body {
+    @apply border-mairie-700 bg-mairie-50 dark:bg-mairie-900/30 font-semibold text-mairie-900 dark:text-mairie-100;
+  }
+  .maire-slot-card:hover .maire-slot-card__body {
+    @apply border-mairie-400 bg-slate-50 dark:bg-slate-800;
+  }
+
+  .maire-wizard-steps {
+    @apply flex items-center justify-between gap-1 sm:gap-2 mb-8;
+  }
+  .maire-wizard-step {
+    @apply flex-1 flex flex-col items-center gap-1.5 text-center min-w-0;
+  }
+  .maire-wizard-step__dot {
+    @apply w-9 h-9 rounded-full flex items-center justify-center text-sm font-black border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-500 transition-all duration-300;
+  }
+  .maire-wizard-step.is-active .maire-wizard-step__dot {
+    @apply border-mairie-700 bg-mairie-800 text-white scale-110 shadow-glow;
+  }
+  .maire-wizard-step.is-done .maire-wizard-step__dot {
+    @apply border-mairie-600 bg-mairie-100 dark:bg-mairie-900/50 text-mairie-800 dark:text-mairie-200;
+  }
+  .maire-wizard-step__label {
+    @apply text-[0.65rem] sm:text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 leading-tight px-0.5;
+  }
+  .maire-wizard-step.is-active .maire-wizard-step__label {
+    @apply text-mairie-800 dark:text-mairie-200;
+  }
+  .maire-wizard-panel {
+    @apply space-y-5;
+  }
+  .maire-wizard-panel[hidden] {
+    display: none !important;
+  }
+  .maire-wizard-bar {
+    @apply h-1 w-6 sm:w-10 shrink-0 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden;
+  }
+  .maire-wizard-bar__fill {
+    @apply h-full bg-gradient-to-r from-mairie-700 to-gold-500 transition-all duration-500 ease-out;
+  }
+
+  .maire-tag {
+    @apply inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider;
+  }
+  .maire-surface {
+    @apply rounded-[1.75rem] border border-white/55 bg-white/90 shadow-panel backdrop-blur-md dark:border-white/10 dark:bg-slate-900/80;
+  }
+  .maire-surface--dark {
+    @apply rounded-[1.75rem] border border-white/10 bg-slate-950 text-white shadow-luxury backdrop-blur-md;
+  }
+  .maire-section-kicker {
+    @apply inline-flex items-center gap-2 rounded-full border border-gold-300/40 bg-gold-50/90 px-4 py-1.5 text-[0.68rem] font-black uppercase tracking-[0.22em] text-gold-700 dark:border-gold-500/20 dark:bg-gold-500/10 dark:text-gold-300;
+  }
+  .maire-kpi-card {
+    @apply maire-surface relative overflow-hidden p-5 lg:p-6;
+  }
+  .maire-kpi-card__value {
+    @apply text-3xl md:text-4xl font-black text-slate-950 dark:text-white;
+  }
+  .maire-kpi-card__label {
+    @apply mt-2 text-[0.7rem] font-black uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400;
+  }
+  .maire-panel {
+    @apply maire-surface p-6 lg:p-8;
+  }
+  .maire-panel-title {
+    @apply text-2xl md:text-3xl font-black text-slate-950 dark:text-white;
+  }
+  .maire-editorial-card {
+    @apply relative overflow-hidden rounded-[2rem] border border-white/55 bg-gradient-to-br from-white via-white to-gold-50/80 p-7 shadow-luxury backdrop-blur-md dark:border-white/10 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900;
+  }
+  .maire-link-arrow {
+    @apply inline-flex items-center gap-2 text-sm font-black text-mairie-800 transition-all hover:gap-3 hover:text-mairie-700 dark:text-mairie-200 dark:hover:text-white;
+  }
+  .maire-pill-link {
+    @apply inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white/90 px-4 py-2 text-sm font-bold text-slate-800 transition hover:-translate-y-0.5 hover:border-mairie-500 hover:text-mairie-700 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100 dark:hover:border-mairie-400 dark:hover:text-mairie-200;
+  }
+  .maire-form-shell {
+    @apply rounded-[2rem] border border-slate-200/70 bg-white/90 p-6 shadow-panel backdrop-blur-md dark:border-slate-700/60 dark:bg-slate-900/90 md:p-8;
+  }
+  .maire-glow-line {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-gold-400/70 to-transparent;
+  }
+  /** Photos d’actualités : évite le flou fréquent quand transform/scale est appliqué sur <img> */
+  .maire-actualite-img {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform: translateZ(0);
+  }
+}
+
+/* ============================================================
+ *   ANIMATIONS & EFFETS PARTAGÉS
+ * ============================================================ */
+
+.maire-bg3d { z-index: -1 !important; }
+
+@keyframes mesh-shift {
+  0%, 100% { background-position: 0% 50%, 100% 50%, 50% 0%, 50% 100%; }
+  50% { background-position: 100% 50%, 0% 50%, 50% 100%, 50% 0%; }
+}
+.maire-mesh-bg {
+  background:
+    radial-gradient(at 20% 30%, rgba(245, 158, 11, 0.35) 0px, transparent 50%),
+    radial-gradient(at 80% 20%, rgba(12, 74, 62, 0.45) 0px, transparent 50%),
+    radial-gradient(at 70% 80%, rgba(217, 119, 6, 0.30) 0px, transparent 50%),
+    radial-gradient(at 30% 70%, rgba(20, 184, 166, 0.35) 0px, transparent 50%);
+  background-size: 200% 200%;
+  animation: mesh-shift 20s ease-in-out infinite;
+}
+
+@keyframes blob-morph {
+  0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: rotate(0deg); }
+  25% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; transform: rotate(90deg); }
+  50% { border-radius: 50% 60% 30% 60% / 30% 60% 70% 40%; transform: rotate(180deg); }
+  75% { border-radius: 60% 40% 60% 30% / 70% 30% 50% 60%; transform: rotate(270deg); }
+}
+.maire-blob { animation: blob-morph 25s ease-in-out infinite; }
+
+@keyframes maire-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.maire-shimmer-btn {
+  background: linear-gradient(110deg, #0c4a3e, #1e5f48, #d97706, #1e5f48, #0c4a3e);
+  background-size: 300% 100%;
+  animation: maire-shimmer 4s linear infinite;
+}
+
+@keyframes ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.maire-ticker { animation: ticker 30s linear infinite; }
+
+.maire-text-gradient {
+  background: linear-gradient(135deg, #0c4a3e 0%, #1e5f48 35%, #d97706 70%, #f5b73d 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.maire-text-gradient--light,
+.maire-hero-bg .maire-text-gradient,
+section.text-white .maire-text-gradient,
+section[class*="from-mairie-9"] .maire-text-gradient,
+section[class*="from-mairie-8"] .maire-text-gradient,
+section[class*="bg-mairie-950"] .maire-text-gradient,
+section[class*="to-slate-950"] .maire-text-gradient,
+article.text-white .maire-text-gradient,
+.bg-gradient-to-br.text-white .maire-text-gradient,
+h1.text-white .maire-text-gradient,
+h2.text-white .maire-text-gradient,
+h3.text-white .maire-text-gradient,
+.dark h1[class*="dark:text-white"] .maire-text-gradient,
+.dark h2[class*="dark:text-white"] .maire-text-gradient,
+.dark h3[class*="dark:text-white"] .maire-text-gradient {
+  background: linear-gradient(135deg, #fffbeb 0%, #fde68a 28%, #fbbf24 58%, #ffffff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-15px); }
+}
+.maire-float { animation: float-y 6s ease-in-out infinite; }
+
+.maire-bento-card {
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s;
+}
+.maire-bento-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.3);
+}
+
+.maire-counter { display: inline-block; }
+
+.maire-grain { position: relative; }
+.maire-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.4' /%3E%3C/svg%3E");
+  opacity: 0.05;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+.maire-hero-bg {
+  background: linear-gradient(135deg, #0a3c34 0%, #0c4a3e 35%, #1e5f48 70%, #2e7a5b 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Héros sombres — KPI & kickers (évite texte blanc sur carte blanche opaque) */
+.maire-hero-bg .maire-kpi-card {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  box-shadow: none !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.maire-hero-bg .maire-kpi-card .maire-kpi-card__value,
+.maire-hero-bg .maire-kpi-card .maire-kpi-card__label,
+.maire-hero-bg .maire-kpi-card > p {
+  color: #ffffff !important;
+}
+.maire-hero-bg .maire-kpi-card .maire-kpi-card__label,
+.maire-hero-bg .maire-kpi-card p[class*="text-mairie"] {
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+.maire-hero-bg .maire-section-kicker {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+/* Carte Sénégal / Rufisque-Est (Leaflet) */
+#carte-senegal-commune {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 22rem;
+  min-height: 22rem;
+}
+@media (min-width: 768px) {
+  #carte-senegal-commune {
+    height: 28rem;
+    min-height: 28rem;
+  }
+}
+/* Leaflet impose height:100% — hauteur explicite obligatoire */
+#carte-senegal-commune.leaflet-container {
+  height: 22rem !important;
+  min-height: 22rem;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background: #e2e8f0;
+}
+@media (min-width: 768px) {
+  #carte-senegal-commune.leaflet-container {
+    height: 28rem !important;
+    min-height: 28rem;
+  }
+}
+.maire-map-pin {
+  background: transparent;
+  border: none;
+}
+.maire-map-pin span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 2px solid #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+.maire-map-pin--commune span {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+.maire-map-pin--mairie span {
+  background: linear-gradient(135deg, #0c4a3e, #14b8a6);
+}
+.maire-map-popup strong {
+  display: block;
+  font-size: 0.9rem;
+  color: #0c4a3e;
+  margin-bottom: 0.25rem;
+}
+.maire-map-popup p {
+  margin: 0.15rem 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: #475569;
+}
+.maire-map-popup-coords {
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem !important;
+  color: #64748b !important;
+}
+#carte-senegal-commune .leaflet-control-layers {
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+#carte-senegal-commune .leaflet-control-layers-expanded {
+  padding: 0.5rem 0.65rem;
+  background: rgba(255, 255,  255, 0.96);
+}
+.dark #carte-senegal-commune .leaflet-control-layers-expanded {
+  background: rgba(15, 23, 42, 0.96);
+  color: #e2e8f0;
+}
+#carte-senegal-commune .leaflet-control-layers label {
+  margin-bottom: 0.15rem;
+}

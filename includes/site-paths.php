@@ -18,6 +18,30 @@ declare(strict_types=1);
 /** Liste des sous-dossiers de premier niveau reconnus comme « pages internes ». */
 const MAIRE_KNOWN_SUBFOLDERS = ['admin', 'citoyen', 'mairie', 'presentation', 'super-admin'];
 
+/** Logo complet (Open Graph, documents officiels). */
+const MAIRE_LOGO_PATH = 'img/logo_mairie_rufisque_est.png';
+
+/** Logo en-tête recadré (affichage type rufisqueouest.org, ~298×88). */
+const MAIRE_LOGO_HEADER_PATH = 'img/logo_mairie_rufisque_est-header.png';
+
+/** Emblème seul pour menu mobile. */
+const MAIRE_LOGO_MOBILE_PATH = 'img/logo_mairie_rufisque_est-mobile.png';
+
+function maire_logo_url_absolue(string $relativePath = MAIRE_LOGO_PATH): string
+{
+    return maire_url_absolue($relativePath);
+}
+
+function maire_logo_header_url_absolue(): string
+{
+    return maire_url_absolue(MAIRE_LOGO_HEADER_PATH);
+}
+
+function maire_logo_mobile_url_absolue(): string
+{
+    return maire_url_absolue(MAIRE_LOGO_MOBILE_PATH);
+}
+
 /**
  * Retourne le sous-dossier de premier niveau courant ('admin', 'mairie', 'presentation')
  * ou null si on est à la racine du projet.

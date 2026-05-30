@@ -8,6 +8,8 @@ declare(strict_types=1);
 
 require __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/super-admin-account.php';
+require_once __DIR__ . '/csrf.php';
+maire_csrf_token(MAIRE_CSRF_SCOPE_SUPER_ADMIN);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();

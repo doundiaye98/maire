@@ -6,6 +6,9 @@ require_once __DIR__ . '/includes/abonnement-actif-sync.php';
 require_once __DIR__ . '/includes/commune-abonnement.php';
 require_once __DIR__ . '/includes/compte-mairie.php';
 require_once __DIR__ . '/includes/maire-rate-limit.php';
+require_once __DIR__ . '/includes/csrf.php';
+
+$abonnementCsrfScope = MAIRE_CSRF_SCOPE_ABONNEMENT;
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
@@ -35,6 +38,10 @@ switch (trim((string) ($_GET['besoin'] ?? ''))) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!maire_csrf_validate($abonnementCsrfScope)) {
+        $message = maire_csrf_error_message();
+        $error = true;
+    } else {
     $email = trim((string) ($_POST['email'] ?? ''));
     $motDePasse = trim((string) ($_POST['mot_de_passe'] ?? ''));
 
@@ -101,6 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+    }
     }
 }
 
@@ -177,6 +185,7 @@ $estConnecteAbonne = !empty($_SESSION['subscriber_id']);
                     <?php endif; ?>
 
                     <form action="" method="POST" autocomplete="on" class="space-y-4">
+                        <?php echo maire_csrf_field($abonnementCsrfScope); ?>
                         <div>
                             <label for="email" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">E-mail professionnel</label>
                             <input id="email" name="email" type="email" inputmode="email" autocomplete="username" required placeholder="agent@mairie.sn" class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">

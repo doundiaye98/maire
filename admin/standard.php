@@ -27,6 +27,10 @@ if (isset($pdo) && $pdo !== null) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isError) {
+    if (!maire_csrf_validate(MAIRE_CSRF_SCOPE_ADMIN)) {
+        $feedback = maire_csrf_error_message();
+        $isError = true;
+    } else {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'add') {
@@ -164,6 +168,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$isError) {
             $feedback = 'Actualite du fil mise a jour.';
         }
     }
+    }
 }
 
 $elements = [];
@@ -205,6 +210,7 @@ if (isset($pdo) && $pdo !== null) {
                     </p>
                 <?php endif; ?>
                 <form method="POST">
+                    <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                     <input type="hidden" name="action" value="add">
                     <label for="categorie">Categorie</label>
                     <select id="categorie" name="categorie" required>
@@ -235,6 +241,7 @@ if (isset($pdo) && $pdo !== null) {
                     <?php foreach ($elements as $element): ?>
                         <article class="admin-item">
                             <form method="POST" class="admin-edit-form">
+                                <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                 <input type="hidden" name="action" value="update">
                                 <input type="hidden" name="id" value="<?php echo (int) $element['id']; ?>">
 
@@ -263,6 +270,7 @@ if (isset($pdo) && $pdo !== null) {
                             </form>
 
                             <form method="POST" class="admin-delete-form" onsubmit="return confirm('Confirmer la suppression de cet element ?');">
+                                <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?php echo (int) $element['id']; ?>">
                                 <button class="btn btn-outline-dark" type="submit">Supprimer</button>
@@ -283,6 +291,7 @@ if (isset($pdo) && $pdo !== null) {
                 <article class="card">
                     <h3>Nouvelle actualite</h3>
                     <form method="POST">
+                        <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                         <input type="hidden" name="action" value="hub_add">
                         <label for="hub_titre">Titre</label>
                         <input id="hub_titre" name="hub_titre" type="text" maxlength="200" required>
@@ -313,6 +322,7 @@ if (isset($pdo) && $pdo !== null) {
                         <?php foreach ($hubElements as $h): ?>
                             <article class="admin-item">
                                 <form method="POST" class="admin-edit-form">
+                                <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                     <input type="hidden" name="action" value="hub_update">
                                     <input type="hidden" name="hub_id" value="<?php echo (int) $h['id']; ?>">
 
@@ -340,6 +350,7 @@ if (isset($pdo) && $pdo !== null) {
                                     </div>
                                 </form>
                                 <form method="POST" class="admin-delete-form" onsubmit="return confirm('Supprimer cette actualite du fil ?');">
+                                    <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                     <input type="hidden" name="action" value="hub_delete">
                                     <input type="hidden" name="hub_id" value="<?php echo (int) $h['id']; ?>">
                                     <button class="btn btn-outline-dark" type="submit">Supprimer</button>

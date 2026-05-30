@@ -6,13 +6,14 @@ require __DIR__ . '/includes/header.php';
 ?>
 <main class="overflow-hidden">
     <!-- HERO -->
-    <section class="relative maire-hero-bg text-white py-24 maire-grain">
+    <section class="relative maire-hero-bg text-white py-24 lg:py-28 maire-grain overflow-hidden">
         <div class="absolute -top-32 -right-32 w-[35rem] h-[35rem] bg-gold-500/25 maire-blob blur-3xl pointer-events-none" aria-hidden="true"></div>
         <div class="absolute -bottom-32 -left-32 w-[35rem] h-[35rem] bg-mairie-400/30 maire-blob blur-3xl pointer-events-none" style="animation-delay: -10s;" aria-hidden="true"></div>
+        <div class="absolute inset-0 opacity-[0.08] pointer-events-none" style="background-image: linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px); background-size: 44px 44px;" aria-hidden="true"></div>
 
         <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
             <div class="max-w-3xl">
-                <span class="maire-tag bg-white/10 backdrop-blur-sm border border-white/20 text-gold-300 mb-5">
+                <span class="maire-section-kicker mb-5 !bg-white/12 !text-white !border-white/20">
                     <span class="w-1.5 h-1.5 rounded-full bg-gold-400 animate-pulse"></span>
                     Présentation officielle
                 </span>
@@ -34,9 +35,15 @@ require __DIR__ . '/includes/header.php';
         <div class="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div class="grid lg:grid-cols-[1fr_1.6fr] gap-8 items-start">
                 <!-- Portrait -->
-                <article class="maire-bento-card tw-card overflow-hidden">
+                <article class="maire-editorial-card overflow-hidden !p-0">
                     <div class="relative aspect-[3/4] overflow-hidden">
-                        <img src="assets/img/maire-portrait.jpg" alt="Portrait officiel d’Elimane Sakho Sembène, Maire de Rufisque-Est"
+                        <?php
+                        $portraitPath = is_file(__DIR__ . '/assets/img/maire-portrait.jpg')
+                            ? 'assets/img/maire-portrait.jpg'
+                            : 'assets/img/maire-portrait.svg';
+                        ?>
+                        <img src="<?php echo htmlspecialchars($portraitPath, ENT_QUOTES, 'UTF-8'); ?>"
+                             alt="Portrait officiel d’Elimane Sakho Sembène, Maire de Rufisque-Est"
                              class="absolute inset-0 w-full h-full object-cover object-top">
                         <div class="absolute inset-0 bg-gradient-to-t from-mairie-950/80 via-transparent to-transparent"></div>
                         <div class="absolute bottom-0 left-0 right-0 p-6 text-white">
@@ -48,7 +55,7 @@ require __DIR__ . '/includes/header.php';
                 </article>
 
                 <!-- Bio -->
-                <article class="tw-card p-8 md:p-10">
+                <article class="maire-editorial-card">
                     <span class="maire-tag bg-mairie-100 text-mairie-800 dark:bg-mairie-900/40 dark:text-mairie-200 mb-3">Biographie</span>
                     <h2 class="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-5 leading-tight">
                         Un engagement <span class="maire-text-gradient">au service de tous</span>
@@ -72,16 +79,16 @@ require __DIR__ . '/includes/header.php';
                     </div>
                     <div class="mt-8 grid grid-cols-3 gap-3">
                         <div class="text-center p-4 rounded-2xl bg-gradient-to-br from-mairie-50 to-emerald-50 dark:from-mairie-950/40 dark:to-emerald-950/40 border border-mairie-200/50 dark:border-mairie-800/50">
-                            <p class="text-3xl font-black maire-text-gradient"><span class="maire-counter" data-target="15" data-suffix="+">0</span></p>
-                            <p class="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider font-bold mt-1">Ans service public</p>
+                            <p class="text-2xl font-black maire-text-gradient">Proximité</p>
+                            <p class="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider font-bold mt-1">Leadership</p>
                         </div>
                         <div class="text-center p-4 rounded-2xl bg-gradient-to-br from-gold-50 to-amber-50 dark:from-gold-950/40 dark:to-amber-950/40 border border-gold-200/50 dark:border-gold-800/50">
-                            <p class="text-3xl font-black maire-text-gradient"><span class="maire-counter" data-target="12">0</span></p>
-                            <p class="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider font-bold mt-1">Quartiers</p>
+                            <p class="text-2xl font-black maire-text-gradient">Action</p>
+                            <p class="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider font-bold mt-1">Engagement</p>
                         </div>
                         <div class="text-center p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 border border-emerald-200/50 dark:border-emerald-800/50">
-                            <p class="text-3xl font-black maire-text-gradient"><span class="maire-counter" data-target="6" data-suffix="+">0</span></p>
-                            <p class="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider font-bold mt-1">Projets phares</p>
+                            <p class="text-2xl font-black maire-text-gradient">Vision</p>
+                            <p class="text-[10px] text-slate-600 dark:text-slate-400 uppercase tracking-wider font-bold mt-1">Ambition</p>
                         </div>
                     </div>
                 </article>
@@ -90,7 +97,7 @@ require __DIR__ . '/includes/header.php';
     </section>
 
     <!-- ADMINISTRATION — ÉQUIPE TECHNIQUE & SOCIALE -->
-    <section class="py-20 bg-white dark:bg-slate-950 relative overflow-hidden">
+    <section id="administration" class="py-20 bg-white dark:bg-slate-950 relative overflow-hidden scroll-mt-20">
         <div class="absolute top-0 right-0 w-[40rem] h-[40rem] bg-gradient-to-bl from-mairie-100/40 dark:from-mairie-900/20 to-transparent rounded-full blur-3xl pointer-events-none" aria-hidden="true"></div>
         <div class="absolute bottom-0 left-0 w-[35rem] h-[35rem] bg-gradient-to-tr from-gold-100/30 dark:from-gold-900/15 to-transparent rounded-full blur-3xl pointer-events-none" aria-hidden="true"></div>
 
@@ -196,7 +203,7 @@ require __DIR__ . '/includes/header.php';
     <section class="py-16 bg-slate-50 dark:bg-slate-900">
         <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div class="grid md:grid-cols-3 gap-6">
-                <article class="maire-bento-card tw-card p-7 relative overflow-hidden">
+                <article class="maire-editorial-card p-7 relative overflow-hidden">
                     <div class="absolute -top-8 -right-8 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl"></div>
                     <div class="relative">
                         <span class="w-14 h-14 mb-4 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center text-2xl shadow-md">🏛️</span>
@@ -210,7 +217,7 @@ require __DIR__ . '/includes/header.php';
                     </div>
                 </article>
 
-                <article class="maire-bento-card tw-card p-7 relative overflow-hidden">
+                <article class="maire-editorial-card p-7 relative overflow-hidden">
                     <div class="absolute -top-8 -right-8 w-32 h-32 bg-gold-500/15 rounded-full blur-2xl"></div>
                     <div class="relative">
                         <span class="w-14 h-14 mb-4 rounded-2xl bg-gradient-to-br from-gold-500 to-orange-600 text-white flex items-center justify-center text-2xl shadow-md">🎯</span>
@@ -240,7 +247,8 @@ require __DIR__ . '/includes/header.php';
             </div>
 
             <div class="mt-12 flex flex-wrap gap-3 justify-center">
-                <a class="tw-btn-primary" href="projets.php">Voir les projets prioritaires</a>
+                <a class="tw-btn-primary" href="audiences-maire.php">Demander une audience en ligne</a>
+                <a class="tw-btn-outline" href="projets.php">Voir les projets prioritaires</a>
                 <a class="tw-btn-outline" href="contact.php">Contacter le cabinet</a>
             </div>
         </div>

@@ -21,7 +21,7 @@ if ($ref === '' || $pdo === null) {
     require __DIR__ . '/includes/header.php';
     ?>
     <main class="overflow-hidden">
-      <section class="relative maire-hero-bg text-white py-24 maire-grain">
+      <section class="relative maire-hero-bg text-white py-24 maire-grain overflow-hidden">
         <div class="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div class="text-7xl mb-4 opacity-80">⚠️</div>
           <h1 class="text-4xl md:text-5xl font-black mb-3">Référence manquante</h1>
@@ -42,7 +42,7 @@ if ($paie === null) {
     require __DIR__ . '/includes/header.php';
     ?>
     <main class="overflow-hidden">
-      <section class="relative maire-hero-bg text-white py-24 maire-grain">
+      <section class="relative maire-hero-bg text-white py-24 maire-grain overflow-hidden">
         <div class="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div class="text-7xl mb-4 opacity-80">🔍</div>
           <h1 class="text-4xl md:text-5xl font-black mb-3">Paiement introuvable</h1>
@@ -91,11 +91,12 @@ if ($paye) {
 ?>
 <main class="overflow-hidden">
     <!-- HERO STATUT -->
-    <section class="relative bg-gradient-to-br <?php echo $heroBg; ?> text-white py-24 maire-grain">
+    <section class="relative bg-gradient-to-br <?php echo $heroBg; ?> text-white py-24 maire-grain overflow-hidden">
         <div class="absolute -top-32 -right-32 w-[35rem] h-[35rem] bg-white/10 maire-blob blur-3xl pointer-events-none" aria-hidden="true"></div>
+        <div class="absolute inset-0 opacity-[0.08] pointer-events-none" style="background-image: linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px); background-size: 44px 44px;" aria-hidden="true"></div>
         <div class="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center relative z-10">
             <div class="text-8xl mb-6 maire-float"><?php echo $heroIcon; ?></div>
-            <span class="maire-tag bg-white/10 backdrop-blur-sm border border-white/20 text-white/90 mb-4">Retour passerelle de paiement</span>
+            <span class="maire-section-kicker mb-4 !bg-white/12 !text-white !border-white/20">Retour passerelle de paiement</span>
             <h1 class="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight mb-4"><?php echo htmlspecialchars($heroTitle, ENT_QUOTES, 'UTF-8'); ?></h1>
             <p class="text-lg text-white/90">Référence : <code class="px-3 py-1.5 rounded-lg bg-white/15 backdrop-blur-md font-mono"><?php echo htmlspecialchars((string) $paie['reference'], ENT_QUOTES, 'UTF-8'); ?></code></p>
         </div>
@@ -105,24 +106,24 @@ if ($paye) {
         <div class="container mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 space-y-6">
 
             <?php if ($paye): ?>
-                <div class="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-2 border-emerald-500 rounded-2xl p-7">
+                <div class="maire-panel border-2 border-emerald-500 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30">
                     <h2 class="text-xl font-black text-emerald-900 dark:text-emerald-200 mb-2">Merci, votre règlement est enregistré</h2>
                     <p class="text-emerald-800 dark:text-emerald-300">La mairie a bien reçu votre paiement. Un reçu numérique est accessible ci-dessous. Pour les documents express, vous serez recontacté(e) dans le délai indiqué.</p>
                 </div>
             <?php elseif ($echec): ?>
-                <div class="bg-red-50 dark:bg-red-950/30 border-2 border-red-500 rounded-2xl p-7">
+                <div class="maire-panel border-2 border-red-500 bg-red-50 dark:bg-red-950/30">
                     <h2 class="text-xl font-black text-red-900 dark:text-red-200 mb-2">Le paiement n'a pas abouti</h2>
                     <p class="text-red-800 dark:text-red-300 mb-4">Vous pouvez réessayer ou choisir un autre moyen de paiement.</p>
                     <a class="tw-btn-primary" href="payer.php?service=<?php echo urlencode((string) $paie['service_code']); ?>">Réessayer</a>
                 </div>
             <?php else: ?>
-                <div class="bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-500 rounded-2xl p-7">
+                <div class="maire-panel border-2 border-amber-500 bg-amber-50 dark:bg-amber-950/30">
                     <h2 class="text-xl font-black text-amber-900 dark:text-amber-200 mb-2">Votre paiement est en cours de traitement</h2>
                     <p class="text-amber-800 dark:text-amber-300">La passerelle confirme habituellement le paiement en quelques secondes. Rafraîchissez cette page dans un instant pour vérifier le statut.</p>
                 </div>
             <?php endif; ?>
 
-            <article class="tw-card p-7">
+            <article class="maire-form-shell">
                 <h2 class="text-xl font-black text-slate-900 dark:text-white mb-5 flex items-center gap-2">
                     <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-mairie-700 to-mairie-900 text-white flex items-center justify-center">📃</span>
                     Reçu de transaction
@@ -142,7 +143,7 @@ if ($paye) {
                     </div>
                     <div class="grid grid-cols-3 gap-3 py-3">
                         <dt class="text-sm text-slate-500 dark:text-slate-400 font-bold">Montant</dt>
-                        <dd class="col-span-2 text-lg font-black maire-text-gradient"><?php echo maire_paiement_format_montant((float) $paie['montant'], (string) $paie['devise']); ?></dd>
+                        <dd class="col-span-2 text-lg font-black text-mairie-800 dark:text-gold-300"><?php echo maire_paiement_format_montant((float) $paie['montant'], (string) $paie['devise']); ?></dd>
                     </div>
                     <div class="grid grid-cols-3 gap-3 py-3">
                         <dt class="text-sm text-slate-500 dark:text-slate-400 font-bold">Moyen de paiement</dt>

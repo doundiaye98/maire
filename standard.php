@@ -3,6 +3,7 @@ declare(strict_types=1);
 $mairePortalMinPalier = 'standard';
 require __DIR__ . '/includes/commune-portal-guard.php';
 require_once __DIR__ . '/includes/super-admin-session.php';
+require_once __DIR__ . '/includes/etat-civil-demande.php';
 $maireCanVoirOffres = (($_SESSION['subscriber_role'] ?? '') === 'admin') || maire_super_admin_session_valid();
 require __DIR__ . '/includes/header.php';
 
@@ -34,6 +35,8 @@ $cycleJours = 30;
 $pourcentageCycle = $cycleJours > 0 ? min(100, (int) round(($joursRestants / $cycleJours) * 100)) : 0;
 
 if (isset($pdo) && $pdo !== null) {
+    maire_ensure_demandes_etat_civil_tables($pdo);
+
     try {
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS standard_hub_actualites (
@@ -67,9 +70,11 @@ if (isset($pdo) && $pdo !== null) {
         }
         foreach ($rowsType as $r) {
             $c = (int) ($r['c'] ?? 0);
-            $label = trim((string) ($r['t'] ?? ''));
-            if ($label === '') {
+            $typeCode = trim((string) ($r['t'] ?? ''));
+            if ($typeCode === '') {
                 $label = '(Type non renseigne)';
+            } else {
+                $label = maire_libelle_type_demande_etat_civil($typeCode);
             }
             $dashParType[] = [
                 'label' => $label,
@@ -172,23 +177,23 @@ if (isset($pdo) && $pdo !== null) {
             $mesDemandesEtatCivil = $stmt->fetchAll();
 
             $agg = $pdo->prepare("
-                SELECT statut, COUNT(*) AS c
+                SELECT
+                    COUNT(*) AS total,
+                    SUM(CASE WHEN statut = 'recu' THEN 1 ELSE 0 END) AS recu,
+                    SUM(CASE WHEN statut = 'en_cours' THEN 1 ELSE 0 END) AS verification,
+                    SUM(CASE WHEN statut = 'pret' THEN 1 ELSE 0 END) AS pret
                 FROM demandes_etat_civil
                 WHERE email = :email
-                GROUP BY statut
             ");
             $agg->execute(['email' => $emailAbonne]);
-            foreach ($agg->fetchAll() as $row) {
-                $st = strtolower((string) ($row['statut'] ?? ''));
-                $n = (int) ($row['c'] ?? 0);
-                $statsDossiers['total'] += $n;
-                if ($st === 'recu') {
-                    $statsDossiers['recu'] += $n;
-                } elseif (str_contains($st, 'verif')) {
-                    $statsDossiers['verification'] += $n;
-                } elseif (str_contains($st, 'pret')) {
-                    $statsDossiers['pret'] += $n;
-                }
+            $statsRow = $agg->fetch();
+            if (is_array($statsRow)) {
+                $statsDossiers = [
+                    'total' => (int) ($statsRow['total'] ?? 0),
+                    'recu' => (int) ($statsRow['recu'] ?? 0),
+                    'verification' => (int) ($statsRow['verification'] ?? 0),
+                    'pret' => (int) ($statsRow['pret'] ?? 0),
+                ];
             }
         } catch (Throwable $e) {
             $mesDemandesEtatCivil = [];
@@ -386,8 +391,8 @@ function std_badge_label(string $badge): string
                                 <?php foreach ($mesDemandesEtatCivil as $d): ?>
                                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                                         <td class="px-4 py-3"><code class="px-2 py-0.5 rounded bg-mairie-50 dark:bg-mairie-950/30 text-mairie-700 dark:text-mairie-300 font-mono text-xs"><?php echo htmlspecialchars((string) ($d['reference_dossier'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></code></td>
-                                        <td class="px-4 py-3 text-slate-700 dark:text-slate-300"><?php echo htmlspecialchars((string) ($d['type_demande'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></td>
-                                        <td class="px-4 py-3"><span class="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300"><?php echo htmlspecialchars((string) ($d['statut'] ?? ''), ENT_QUOTES, 'UTF-8'); ?></span></td>
+                                        <td class="px-4 py-3 text-slate-700 dark:text-slate-300"><?php echo htmlspecialchars(maire_libelle_type_demande_etat_civil((string) ($d['type_demande'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></td>
+                                        <td class="px-4 py-3"><span class="<?php echo htmlspecialchars(maire_classe_badge_statut_etat_civil((string) ($d['statut'] ?? '')), ENT_QUOTES, 'UTF-8'); ?> inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold"><?php echo htmlspecialchars(maire_libelle_statut_demande_etat_civil((string) ($d['statut'] ?? '')), ENT_QUOTES, 'UTF-8'); ?></span></td>
                                         <td class="px-4 py-3 text-slate-600 dark:text-slate-400 text-xs"><?php echo htmlspecialchars(substr((string) ($d['created_at'] ?? ''), 0, 16), ENT_QUOTES, 'UTF-8'); ?></td>
                                     </tr>
                                 <?php endforeach; ?>

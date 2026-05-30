@@ -66,14 +66,15 @@ require __DIR__ . '/includes/header.php';
 ?>
 <main class="overflow-hidden">
     <!-- HERO -->
-    <section class="relative maire-hero-bg text-white py-24 maire-grain">
+    <section class="relative maire-hero-bg text-white py-24 lg:py-28 maire-grain overflow-hidden">
         <div class="absolute -top-32 -right-32 w-[35rem] h-[35rem] bg-gold-500/25 maire-blob blur-3xl pointer-events-none" aria-hidden="true"></div>
         <div class="absolute -bottom-32 -left-32 w-[35rem] h-[35rem] bg-mairie-400/30 maire-blob blur-3xl pointer-events-none" style="animation-delay: -10s;" aria-hidden="true"></div>
+        <div class="absolute inset-0 opacity-[0.08] pointer-events-none" style="background-image: linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px); background-size: 44px 44px;" aria-hidden="true"></div>
 
         <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
             <div class="flex flex-wrap items-end justify-between gap-8">
                 <div class="max-w-2xl">
-                    <span class="maire-tag bg-white/10 backdrop-blur-sm border border-white/20 text-gold-300 mb-5">
+                    <span class="maire-section-kicker mb-5 !bg-white/12 !text-white !border-white/20">
                         <span class="w-1.5 h-1.5 rounded-full bg-gold-400 animate-pulse"></span>
                         Espace habitants
                     </span>
@@ -85,14 +86,14 @@ require __DIR__ . '/includes/header.php';
                     </p>
                 </div>
                 <div class="grid grid-cols-2 gap-3 min-w-[280px]">
-                    <div class="p-5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20">
-                        <p class="text-4xl font-black"><span class="maire-counter" data-target="<?php echo $totalDocuments; ?>">0</span></p>
-                        <p class="text-xs text-mairie-200 uppercase tracking-wider font-bold mt-1">Documents</p>
-                    </div>
-                    <div class="p-5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20">
-                        <p class="text-4xl font-black"><span class="maire-counter" data-target="<?php echo $totalTelechargements; ?>">0</span></p>
-                        <p class="text-xs text-mairie-200 uppercase tracking-wider font-bold mt-1">Téléchargements</p>
-                    </div>
+                    <article class="maire-kpi-card">
+                        <p class="maire-kpi-card__value"><span class="maire-counter" data-target="<?php echo $totalDocuments; ?>">0</span></p>
+                        <p class="maire-kpi-card__label">Documents</p>
+                    </article>
+                    <article class="maire-kpi-card">
+                        <p class="maire-kpi-card__value"><span class="maire-counter" data-target="<?php echo $totalTelechargements; ?>">0</span></p>
+                        <p class="maire-kpi-card__label">Téléchargements</p>
+                    </article>
                 </div>
             </div>
         </div>
@@ -103,7 +104,7 @@ require __DIR__ . '/includes/header.php';
         <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
             <!-- Filtres chips -->
-            <form method="GET" action="documents.php" class="tw-card p-5 mb-8" id="docFilter">
+            <form method="GET" action="documents.php" class="maire-form-shell mb-8" id="docFilter">
                 <p class="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold mb-3">Filtrer par catégorie</p>
                 <div class="flex flex-wrap gap-2">
                     <button type="submit" name="cat" value=""
@@ -141,7 +142,7 @@ require __DIR__ . '/includes/header.php';
                 <?php endif; ?>
 
                 <!-- État vide — engageant et informatif -->
-                <div class="tw-card p-8 md:p-12 mb-8 relative overflow-hidden">
+                <div class="maire-editorial-card p-8 md:p-12 mb-8 relative">
                     <div class="absolute -top-20 -right-20 w-72 h-72 bg-mairie-100/60 dark:bg-mairie-900/20 rounded-full blur-3xl pointer-events-none" aria-hidden="true"></div>
                     <div class="absolute -bottom-20 -left-20 w-72 h-72 bg-gold-100/50 dark:bg-gold-900/15 rounded-full blur-3xl pointer-events-none" aria-hidden="true"></div>
                     <div class="relative text-center max-w-2xl mx-auto">
@@ -233,7 +234,7 @@ require __DIR__ . '/includes/header.php';
                             </h3>
                             <div class="grid md:grid-cols-2 gap-3">
                                 <?php foreach ($docs as $doc): ?>
-                                    <article class="tw-card p-4 flex items-start gap-3 group">
+                                    <article class="maire-panel p-4 flex items-start gap-3 group">
                                         <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-slate-100 to-mairie-50 dark:from-slate-700 dark:to-mairie-900/40 flex items-center justify-center flex-shrink-0">
                                             <span class="text-xl opacity-90"><?php echo htmlspecialchars($icone, ENT_QUOTES, 'UTF-8'); ?></span>
                                         </div>
@@ -257,7 +258,7 @@ require __DIR__ . '/includes/header.php';
                 </div>
 
                 <!-- FAQ rapide -->
-                <div class="tw-card p-7 md:p-8">
+                <div class="maire-panel p-7 md:p-8">
                     <h2 class="text-xl font-black text-slate-900 dark:text-white mb-5 flex items-center gap-2">
                         <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white flex items-center justify-center">❓</span>
                         Foire aux questions
@@ -265,7 +266,7 @@ require __DIR__ . '/includes/header.php';
                     <div class="grid md:grid-cols-2 gap-x-8 gap-y-5 text-sm">
                         <div>
                             <h3 class="font-black text-slate-900 dark:text-white mb-1">Comment obtenir un document précis maintenant ?</h3>
-                            <p class="text-slate-600 dark:text-slate-400">Contactez la mairie par e-mail à <a href="mailto:Rufisquest02@gmail.com" class="font-bold text-mairie-700 dark:text-mairie-300 hover:underline">Rufisquest02@gmail.com</a>, ou rendez-vous à l’accueil — Toujours ouvert, 7j/7.</p>
+                            <p class="text-slate-600 dark:text-slate-400">Contactez la mairie par e-mail à <a href="mailto:Rufisquest02@gmail.com" class="font-bold text-mairie-700 dark:text-mairie-300 hover:underline">Rufisquest02@gmail.com</a>, utilisez le formulaire de contact du portail ou rapprochez-vous de l’accueil municipal.</p>
                         </div>
                         <div>
                             <h3 class="font-black text-slate-900 dark:text-white mb-1">Quand cette bibliothèque sera-t-elle remplie ?</h3>
@@ -303,7 +304,7 @@ require __DIR__ . '/includes/header.php';
                         </div>
                         <div class="grid md:grid-cols-2 gap-4">
                             <?php foreach ($docs as $doc): ?>
-                                <article class="tw-card p-5 flex items-start gap-4 group">
+                                <article class="maire-panel p-5 flex items-start gap-4 group">
                                     <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-red-100 to-orange-100 dark:from-red-900/30 dark:to-orange-900/30 flex items-center justify-center flex-shrink-0">
                                         <span class="text-3xl">📄</span>
                                     </div>
@@ -333,7 +334,7 @@ require __DIR__ . '/includes/header.php';
             <?php endif; ?>
 
             <!-- Bloc "manque un document ?" -->
-            <div class="mt-12 p-8 rounded-3xl bg-gradient-to-br from-mairie-800 to-mairie-950 text-white relative overflow-hidden">
+            <div class="mt-12 p-8 rounded-[2rem] bg-gradient-to-br from-mairie-800 to-mairie-950 text-white relative overflow-hidden shadow-luxury">
                 <div class="absolute -top-20 -right-20 w-80 h-80 bg-gold-500/30 rounded-full blur-3xl maire-blob pointer-events-none" aria-hidden="true"></div>
                 <div class="relative flex flex-wrap items-center justify-between gap-6">
                     <div class="max-w-2xl">

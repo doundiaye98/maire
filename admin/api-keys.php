@@ -15,17 +15,12 @@ if ($pdo !== null && !maire_super_admin_session_valid() && !maire_feature_dispon
     exit;
 }
 
-if (empty($_SESSION['abo_admin_csrf'])) {
-    $_SESSION['abo_admin_csrf'] = bin2hex(random_bytes(32));
-}
-
 $flash = '';
 $flashType = 'success';
 $nouvelleCle = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
-    $csrf = (string) ($_POST['csrf'] ?? '');
-    if (!hash_equals((string) $_SESSION['abo_admin_csrf'], $csrf)) {
+    if (!maire_csrf_validate(MAIRE_CSRF_SCOPE_ADMIN)) {
         $flash = 'Jeton CSRF invalide.';
         $flashType = 'danger';
     } else {
@@ -115,7 +110,7 @@ require __DIR__ . '/../includes/header.php';
             <article class="card">
                 <h2>➕ Générer une nouvelle clé</h2>
                 <form method="POST" action="api-keys.php" style="display:grid;gap:0.6rem;">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                     <input type="hidden" name="action" value="creer">
                     <div>
                         <label for="libelle" style="display:block;font-weight:600;">Libellé *</label>
@@ -166,14 +161,14 @@ require __DIR__ . '/../includes/header.php';
                                 <td style="padding:0.5rem;">
                                     <?php if ((int) $k['actif'] === 1): ?>
                                         <form method="POST" action="api-keys.php" style="display:inline;" onsubmit="return confirm('Révoquer cette clé ? Les appels en cours échoueront immédiatement.');">
-                                            <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                                            <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                             <input type="hidden" name="action" value="revoquer">
                                             <input type="hidden" name="id" value="<?php echo (int) $k['id']; ?>">
                                             <button type="submit" class="btn btn-outline-dark" style="padding:0.3rem 0.6rem;font-size:0.85rem;">🚫 Révoquer</button>
                                         </form>
                                     <?php endif; ?>
                                     <form method="POST" action="api-keys.php" style="display:inline;" onsubmit="return confirm('Supprimer définitivement cette clé ?');">
-                                        <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                         <input type="hidden" name="action" value="supprimer">
                                         <input type="hidden" name="id" value="<?php echo (int) $k['id']; ?>">
                                         <button type="submit" class="btn btn-outline-dark" style="padding:0.3rem 0.6rem;font-size:0.85rem;color:#dc2626;">🗑</button>

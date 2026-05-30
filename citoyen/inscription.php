@@ -14,6 +14,9 @@ require_once __DIR__ . '/../includes/site-paths.php';
 require_once __DIR__ . '/../includes/citoyen-session.php';
 require_once __DIR__ . '/../includes/maire-rate-limit.php';
 require_once __DIR__ . '/../includes/feature-gates.php';
+require_once __DIR__ . '/../includes/csrf.php';
+
+$citoyenCsrfScope = MAIRE_CSRF_SCOPE_CITOYEN;
 
 if (maire_citoyen_session_valid()) {
     header('Location: profil.php', true, 302);
@@ -30,14 +33,9 @@ $message = '';
 $messageType = 'info';
 $dataSaisie = ['email' => '', 'prenom' => '', 'nom' => '', 'telephone' => '', 'quartier' => ''];
 
-if (empty($_SESSION['citoyen_csrf'])) {
-    $_SESSION['citoyen_csrf'] = bin2hex(random_bytes(32));
-}
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
-    $csrf = (string) ($_POST['csrf'] ?? '');
-    if (!hash_equals((string) $_SESSION['citoyen_csrf'], $csrf)) {
-        $message = 'Jeton de sécurité invalide. Recharge la page et réessaie.';
+    if (!maire_csrf_validate($citoyenCsrfScope)) {
+        $message = maire_csrf_error_message();
         $messageType = 'danger';
     } elseif (!maire_rate_limit_allow('citoyen_inscription', 30, 600)) {
         $message = 'Trop de tentatives d’inscription depuis ce réseau. Réessaie dans quelques minutes.';
@@ -85,13 +83,14 @@ $alertClasses = [
 $alertIcons = ['danger' => '⚠️', 'success' => '✅', 'info' => 'ℹ️'];
 ?>
 <main class="overflow-hidden">
-    <section class="relative maire-hero-bg text-white py-16 maire-grain min-h-screen flex items-center">
+    <section class="relative maire-hero-bg text-white py-16 maire-grain min-h-screen flex items-center overflow-hidden">
         <div class="absolute -top-32 -right-32 w-[35rem] h-[35rem] bg-gold-500/30 maire-blob blur-3xl pointer-events-none" aria-hidden="true"></div>
         <div class="absolute -bottom-32 -left-32 w-[35rem] h-[35rem] bg-emerald-400/30 maire-blob blur-3xl pointer-events-none" style="animation-delay: -10s;" aria-hidden="true"></div>
+        <div class="absolute inset-0 opacity-[0.08] pointer-events-none" style="background-image: linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px); background-size: 44px 44px;" aria-hidden="true"></div>
 
         <div class="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 relative z-10 grid lg:grid-cols-[1fr_1.2fr] gap-10 items-center">
             <div>
-                <span class="maire-tag bg-white/10 backdrop-blur-sm border border-white/20 text-gold-300 mb-5">
+                <span class="maire-section-kicker mb-5 !bg-white/12 !text-white !border-white/20">
                     <span class="w-1.5 h-1.5 rounded-full bg-gold-400 animate-pulse"></span>
                     Espace citoyen · Inscription
                 </span>
@@ -102,13 +101,13 @@ $alertIcons = ['danger' => '⚠️', 'success' => '✅', 'info' => 'ℹ️'];
                     Inscrivez-vous pour signaler un problème dans votre quartier, suivre vos demandes et recevoir les actualités de votre mairie.
                 </p>
                 <ul class="space-y-2 text-sm text-mairie-100">
-                    <li class="flex items-center gap-2"><span class="text-emerald-400 font-black">✓</span> 100% gratuit</li>
+                    <li class="flex items-center gap-2"><span class="text-emerald-400 font-black">✓</span> Inscription sans frais</li>
                     <li class="flex items-center gap-2"><span class="text-emerald-400 font-black">✓</span> Données protégées</li>
                     <li class="flex items-center gap-2"><span class="text-emerald-400 font-black">✓</span> Aucune publicité</li>
                 </ul>
             </div>
 
-            <article class="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-7 md:p-9">
+            <article class="maire-form-shell shadow-luxury">
                 <div class="mb-5">
                     <span class="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-gold-500 to-orange-600 text-white items-center justify-center text-2xl shadow-md mb-3">✨</span>
                     <h2 class="text-2xl font-black text-slate-900 dark:text-white">Créer mon compte</h2>
@@ -126,43 +125,43 @@ $alertIcons = ['danger' => '⚠️', 'success' => '✅', 'info' => 'ℹ️'];
                 <?php endif; ?>
 
                 <form method="POST" action="inscription.php" autocomplete="on" class="space-y-3">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['citoyen_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field($citoyenCsrfScope); ?>
 
                     <div class="grid sm:grid-cols-2 gap-3">
                         <div>
                             <label for="prenom" class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">Prénom *</label>
-                            <input type="text" id="prenom" name="prenom" required maxlength="80" value="<?php echo htmlspecialchars($dataSaisie['prenom'], ENT_QUOTES, 'UTF-8'); ?>" autocomplete="given-name" class="w-full px-3 py-2 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+                            <input type="text" id="prenom" name="prenom" required maxlength="80" value="<?php echo htmlspecialchars($dataSaisie['prenom'], ENT_QUOTES, 'UTF-8'); ?>" autocomplete="given-name" class="tw-input">
                         </div>
                         <div>
                             <label for="nom" class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">Nom *</label>
-                            <input type="text" id="nom" name="nom" required maxlength="80" value="<?php echo htmlspecialchars($dataSaisie['nom'], ENT_QUOTES, 'UTF-8'); ?>" autocomplete="family-name" class="w-full px-3 py-2 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+                            <input type="text" id="nom" name="nom" required maxlength="80" value="<?php echo htmlspecialchars($dataSaisie['nom'], ENT_QUOTES, 'UTF-8'); ?>" autocomplete="family-name" class="tw-input">
                         </div>
                     </div>
 
                     <div>
                         <label for="email" class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">Adresse e-mail *</label>
-                        <input type="email" id="email" name="email" required maxlength="190" value="<?php echo htmlspecialchars($dataSaisie['email'], ENT_QUOTES, 'UTF-8'); ?>" autocomplete="email" class="w-full px-3 py-2 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+                        <input type="email" id="email" name="email" required maxlength="190" value="<?php echo htmlspecialchars($dataSaisie['email'], ENT_QUOTES, 'UTF-8'); ?>" autocomplete="email" class="tw-input">
                     </div>
 
                     <div class="grid sm:grid-cols-2 gap-3">
                         <div>
                             <label for="telephone" class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">Téléphone <small class="text-slate-400 font-normal">(facultatif)</small></label>
-                            <input type="tel" id="telephone" name="telephone" maxlength="40" value="<?php echo htmlspecialchars($dataSaisie['telephone'], ENT_QUOTES, 'UTF-8'); ?>" autocomplete="tel" placeholder="+221 77..." class="w-full px-3 py-2 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+                            <input type="tel" id="telephone" name="telephone" maxlength="40" value="<?php echo htmlspecialchars($dataSaisie['telephone'], ENT_QUOTES, 'UTF-8'); ?>" autocomplete="tel" placeholder="+221 77..." class="tw-input">
                         </div>
                         <div>
                             <label for="quartier" class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">Quartier <small class="text-slate-400 font-normal">(facultatif)</small></label>
-                            <input type="text" id="quartier" name="quartier" maxlength="120" value="<?php echo htmlspecialchars($dataSaisie['quartier'], ENT_QUOTES, 'UTF-8'); ?>" placeholder="Keury Souf, Darou..." class="w-full px-3 py-2 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+                            <input type="text" id="quartier" name="quartier" maxlength="120" value="<?php echo htmlspecialchars($dataSaisie['quartier'], ENT_QUOTES, 'UTF-8'); ?>" placeholder="Keury Souf, Darou..." class="tw-input">
                         </div>
                     </div>
 
                     <div class="grid sm:grid-cols-2 gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
                         <div>
                             <label for="mot_de_passe" class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">Mot de passe * <small class="text-slate-400 font-normal">(≥ 8 caractères)</small></label>
-                            <input type="password" id="mot_de_passe" name="mot_de_passe" required minlength="8" autocomplete="new-password" class="w-full px-3 py-2 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+                            <input type="password" id="mot_de_passe" name="mot_de_passe" required minlength="8" autocomplete="new-password" class="tw-input">
                         </div>
                         <div>
                             <label for="mot_de_passe_confirm" class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">Confirmation *</label>
-                            <input type="password" id="mot_de_passe_confirm" name="mot_de_passe_confirm" required minlength="8" autocomplete="new-password" class="w-full px-3 py-2 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+                            <input type="password" id="mot_de_passe_confirm" name="mot_de_passe_confirm" required minlength="8" autocomplete="new-password" class="tw-input">
                         </div>
                     </div>
 

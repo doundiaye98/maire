@@ -9,7 +9,7 @@ $projetsRealises = [
         'categorie' => 'Infrastructure',
         'titre' => 'Réhabilitation voirie de Keury Souf',
         'description' => 'Réfection de tronçons dégradés, ajout de signalisation et aménagement de trottoirs pour fluidifier la circulation.',
-        'image' => 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1200&q=80',
+        'image' => maire_placeholder_image('voirie'),
         'avancement' => 100,
         'gradient' => 'from-blue-500 to-indigo-600',
     ],
@@ -17,7 +17,7 @@ $projetsRealises = [
         'categorie' => 'Éducation',
         'titre' => 'Équipement de 5 écoles publiques',
         'description' => 'Dotation en tables-bancs, kits pédagogiques et réhabilitation légère de salles de classe dans plusieurs quartiers.',
-        'image' => 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1200&q=80',
+        'image' => maire_placeholder_image('education'),
         'avancement' => 100,
         'gradient' => 'from-amber-500 to-orange-500',
     ],
@@ -25,7 +25,7 @@ $projetsRealises = [
         'categorie' => 'Éclairage public',
         'titre' => 'Installation de lampadaires solaires',
         'description' => 'Mise en place de nouveaux points lumineux sur les axes prioritaires pour renforcer la sécurité nocturne.',
-        'image' => 'https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=1200&q=80',
+        'image' => maire_placeholder_image('eclairage'),
         'avancement' => 100,
         'gradient' => 'from-yellow-500 to-amber-600',
     ],
@@ -36,7 +36,7 @@ $projetsEnCours = [
         'categorie' => 'Numérique',
         'titre' => 'Digitalisation des démarches citoyennes',
         'description' => "Développement des services en ligne pour l'état civil et le suivi des demandes sans déplacement.",
-        'image' => 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80',
+        'image' => maire_placeholder_image('numerique'),
         'avancement' => 72,
         'gradient' => 'from-mairie-700 to-mairie-900',
     ],
@@ -44,7 +44,7 @@ $projetsEnCours = [
         'categorie' => 'Assainissement',
         'titre' => 'Extension du réseau de drainage',
         'description' => 'Création de nouvelles canalisations pour limiter les inondations en période hivernale.',
-        'image' => 'https://images.unsplash.com/photo-1479839672679-a46483c0e7c8?auto=format&fit=crop&w=1200&q=80',
+        'image' => maire_placeholder_image('assainissement'),
         'avancement' => 61,
         'gradient' => 'from-cyan-500 to-blue-600',
     ],
@@ -52,56 +52,63 @@ $projetsEnCours = [
         'categorie' => 'Cadre de vie',
         'titre' => "Aménagement d'espaces verts de proximité",
         'description' => 'Transformation de zones sous-utilisées en espaces de détente et de loisirs pour les familles.',
-        'image' => 'https://images.unsplash.com/photo-1473448912268-2022ce9509d8?auto=format&fit=crop&w=1200&q=80',
+        'image' => maire_placeholder_image('cadre-de-vie'),
         'avancement' => 48,
         'gradient' => 'from-emerald-500 to-teal-600',
     ],
 ];
 ?>
 <main class="overflow-hidden">
-    <!-- HERO -->
-    <section class="relative maire-hero-bg text-white py-24 maire-grain">
+    <section class="relative maire-hero-bg text-white py-24 lg:py-28 maire-grain overflow-hidden">
         <div class="absolute -top-32 -right-32 w-[35rem] h-[35rem] bg-gold-500/25 maire-blob blur-3xl pointer-events-none" aria-hidden="true"></div>
         <div class="absolute -bottom-32 -left-32 w-[35rem] h-[35rem] bg-mairie-400/30 maire-blob blur-3xl pointer-events-none" style="animation-delay: -10s;" aria-hidden="true"></div>
+        <div class="absolute inset-0 opacity-[0.08] pointer-events-none" style="background-image: linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px); background-size: 44px 44px;" aria-hidden="true"></div>
 
         <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-            <div class="max-w-3xl">
-                <span class="maire-tag bg-white/10 backdrop-blur-sm border border-white/20 text-gold-300 mb-5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-gold-400 animate-pulse"></span>
-                    Développement territorial
-                </span>
-                <h1 class="text-5xl md:text-6xl lg:text-7xl font-black leading-[0.95] tracking-tight mb-5">
-                    Projets<br><span class="maire-text-gradient">prioritaires</span>
-                </h1>
-                <p class="text-xl text-mairie-100 leading-relaxed max-w-2xl">
-                    Les projets réalisés et ceux en cours sont accessibles gratuitement pour tous les citoyens.
-                </p>
-            </div>
+            <div class="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
+                <div class="max-w-3xl">
+                    <span class="maire-section-kicker mb-5 !bg-white/12 !text-white !border-white/20">Développement territorial</span>
+                    <h1 class="text-5xl md:text-6xl lg:text-7xl font-black leading-[0.92] tracking-tight mb-5">
+                        Les projets<br><span class="text-gold-200">qui transforment</span>
+                    </h1>
+                    <p class="text-xl md:text-2xl text-mairie-100 leading-relaxed max-w-3xl">
+                        Une lecture plus transparente des opérations déjà livrées et des chantiers en cours, pour rendre l’action municipale visible et compréhensible.
+                    </p>
+                </div>
 
-            <!-- KPIs -->
-            <div class="grid sm:grid-cols-3 gap-4 mt-12 max-w-3xl">
-                <div class="relative overflow-hidden p-5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15">
-                    <div class="absolute -top-4 -right-4 w-20 h-20 bg-emerald-400/40 rounded-full blur-2xl"></div>
-                    <p class="relative text-4xl font-black"><span class="maire-counter" data-target="<?php echo count($projetsRealises); ?>">0</span></p>
-                    <p class="relative text-xs text-mairie-200 uppercase tracking-wider font-bold mt-1">Projets réalisés</p>
-                </div>
-                <div class="relative overflow-hidden p-5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15">
-                    <div class="absolute -top-4 -right-4 w-20 h-20 bg-amber-400/40 rounded-full blur-2xl"></div>
-                    <p class="relative text-4xl font-black"><span class="maire-counter" data-target="<?php echo count($projetsEnCours); ?>">0</span></p>
-                    <p class="relative text-xs text-mairie-200 uppercase tracking-wider font-bold mt-1">En cours</p>
-                </div>
-                <div class="relative overflow-hidden p-5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15">
-                    <div class="absolute -top-4 -right-4 w-20 h-20 bg-gold-500/40 rounded-full blur-2xl"></div>
-                    <p class="relative text-4xl font-black"><span class="maire-counter" data-target="12">0</span></p>
-                    <p class="relative text-xs text-mairie-200 uppercase tracking-wider font-bold mt-1">Quartiers impactés</p>
+                <div class="grid sm:grid-cols-3 gap-3">
+                    <article class="maire-kpi-card !bg-white/12 !border-white/20 !shadow-none">
+                        <p class="maire-kpi-card__value !text-white"><span class="maire-counter" data-target="<?php echo count($projetsRealises); ?>">0</span></p>
+                        <p class="maire-kpi-card__label !text-white/90">Livrés</p>
+                    </article>
+                    <article class="maire-kpi-card !bg-white/12 !border-white/20 !shadow-none">
+                        <p class="maire-kpi-card__value !text-white"><span class="maire-counter" data-target="<?php echo count($projetsEnCours); ?>">0</span></p>
+                        <p class="maire-kpi-card__label !text-white/90">En cours</p>
+                    </article>
+                    <article class="maire-kpi-card !bg-white/12 !border-white/20 !shadow-none">
+                        <p class="maire-kpi-card__value !text-white"><span class="maire-counter" data-target="12">0</span></p>
+                        <p class="maire-kpi-card__label !text-white/90">Quartiers</p>
+                    </article>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- PROJETS RÉALISÉS -->
     <section class="py-16 bg-slate-50 dark:bg-slate-900">
         <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="maire-editorial-card mb-10">
+                <div class="grid gap-6 md:grid-cols-[1.1fr_0.9fr] md:items-center">
+                    <div>
+                        <span class="maire-section-kicker mb-4">Lecture publique</span>
+                        <h2 class="text-3xl md:text-4xl font-black text-slate-950 dark:text-white mb-3">Distinguer ce qui est livré, ce qui avance et ce qui structure le territoire.</h2>
+                        <p class="text-slate-600 dark:text-slate-300 leading-relaxed">La page met désormais en scène l’effort communal comme une matière lisible, avec un langage commun entre réalisations, progression et impact local.</p>
+                    </div>
+                    <div class="maire-surface--dark p-6">
+                        <p class="text-[0.72rem] uppercase tracking-[0.22em] text-gold-300 font-black mb-3">Vision</p>
+                        <p class="text-sm text-slate-200 leading-relaxed">Voirie, écoles, éclairage, numérique et cadre de vie partagent ici une même promesse: rendre visible l’investissement municipal et son bénéfice concret pour les habitants.</p>
+                    </div>
+                </div>
+            </div>
 
             <div class="flex items-center gap-3 mb-8">
                 <span class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center text-2xl shadow-md">✅</span>
@@ -113,7 +120,7 @@ $projetsEnCours = [
 
             <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <?php foreach ($projetsRealises as $projet): ?>
-                    <article class="tw-card overflow-hidden group">
+                    <article class="maire-editorial-card overflow-hidden group !p-0">
                         <div class="relative aspect-[16/10] overflow-hidden">
                             <img class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src="<?php echo htmlspecialchars($projet['image']); ?>" alt="<?php echo htmlspecialchars($projet['titre']); ?>">
                             <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
@@ -136,7 +143,6 @@ $projetsEnCours = [
         </div>
     </section>
 
-    <!-- PROJETS EN COURS -->
     <section class="py-16 bg-white dark:bg-slate-950">
         <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
@@ -150,7 +156,7 @@ $projetsEnCours = [
 
             <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <?php foreach ($projetsEnCours as $projet): ?>
-                    <article class="tw-card overflow-hidden group">
+                    <article class="maire-editorial-card overflow-hidden group !p-0">
                         <div class="relative aspect-[16/10] overflow-hidden">
                             <img class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src="<?php echo htmlspecialchars($projet['image']); ?>" alt="<?php echo htmlspecialchars($projet['titre']); ?>">
                             <div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
@@ -171,8 +177,7 @@ $projetsEnCours = [
                 <?php endforeach; ?>
             </div>
 
-            <!-- CTA -->
-            <div class="mt-14 relative rounded-3xl overflow-hidden bg-gradient-to-br from-mairie-800 to-mairie-950 text-white p-8 md:p-10">
+            <div class="mt-14 relative rounded-[2rem] overflow-hidden bg-gradient-to-br from-mairie-800 to-mairie-950 text-white p-8 md:p-10 shadow-luxury">
                 <div class="absolute -top-12 -right-12 w-60 h-60 bg-gold-500/30 rounded-full blur-3xl maire-blob pointer-events-none" aria-hidden="true"></div>
                 <div class="relative grid md:grid-cols-[2fr_1fr] items-center gap-6">
                     <div>

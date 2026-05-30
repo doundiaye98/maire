@@ -1,342 +1,511 @@
 <?php
 declare(strict_types=1);
+
 $mairePortalMinPalier = 'standard';
 require __DIR__ . '/includes/commune-portal-guard.php';
-require __DIR__ . '/includes/header.php';
+require_once __DIR__ . '/includes/session-performance.php';
+require_once __DIR__ . '/includes/citoyen-session.php';
+require_once __DIR__ . '/includes/etat-civil-demande.php';
+require_once __DIR__ . '/includes/maire-rate-limit.php';
+require_once __DIR__ . '/includes/csrf.php';
 
-$feedback = null;
-$feedbackError = false;
-$demandeGeneree = null;
-$piecesUploadees = [];
-
-if (isset($pdo) && $pdo !== null) {
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS demandes_etat_civil (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            reference_dossier VARCHAR(40) NOT NULL UNIQUE,
-            type_demande VARCHAR(50) NOT NULL,
-            nom_complet VARCHAR(160) NOT NULL,
-            email VARCHAR(190) NOT NULL,
-            telephone VARCHAR(40) DEFAULT NULL,
-            cni VARCHAR(80) DEFAULT NULL,
-            date_naissance DATE DEFAULT NULL,
-            lieu_naissance VARCHAR(160) DEFAULT NULL,
-            adresse TEXT DEFAULT NULL,
-            details TEXT DEFAULT NULL,
-            statut VARCHAR(40) NOT NULL DEFAULT 'recu',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ");
-
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS demandes_etat_civil_pieces (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            demande_id INT NOT NULL,
-            nom_fichier VARCHAR(220) NOT NULL,
-            chemin_fichier VARCHAR(300) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            CONSTRAINT fk_demande_piece FOREIGN KEY (demande_id)
-                REFERENCES demandes_etat_civil(id) ON DELETE CASCADE
-        )
-    ");
+maire_session_configure_ini();
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $typeDemande = trim((string) ($_POST['type_demande'] ?? ''));
-    $nomComplet = trim((string) ($_POST['nom_complet'] ?? ''));
-    $email = trim((string) ($_POST['email'] ?? ''));
-    $telephone = trim((string) ($_POST['telephone'] ?? ''));
-    $cni = trim((string) ($_POST['cni'] ?? ''));
-    $dateNaissance = trim((string) ($_POST['date_naissance'] ?? ''));
-    $lieuNaissance = trim((string) ($_POST['lieu_naissance'] ?? ''));
-    $adresse = trim((string) ($_POST['adresse'] ?? ''));
-    $details = trim((string) ($_POST['details'] ?? ''));
+$csrfScope = MAIRE_CSRF_SCOPE_ETAT_CIVIL;
+$citoyenConnecte = maire_citoyen_session_valid();
 
-    if ($typeDemande === '' || $nomComplet === '' || $email === '') {
-        $feedback = 'Merci de renseigner les champs obligatoires.';
-        $feedbackError = true;
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $feedback = 'Adresse email invalide.';
-        $feedbackError = true;
-    } elseif (!isset($pdo) || $pdo === null) {
-        $feedback = 'Base de donnees indisponible. Reessayez plus tard.';
-        $feedbackError = true;
+$dataSaisie = [
+    'type_demande' => (string) ($_GET['type'] ?? ''),
+    'nom_complet' => $citoyenConnecte
+        ? trim((string) ($_SESSION['citoyen_prenom'] ?? '') . ' ' . (string) ($_SESSION['citoyen_nom'] ?? ''))
+        : '',
+    'email' => $citoyenConnecte ? (string) ($_SESSION['citoyen_email'] ?? '') : '',
+    'telephone' => '',
+    'cni' => '',
+    'date_naissance' => '',
+    'lieu_naissance' => '',
+    'adresse' => '',
+    'details' => '',
+];
+
+if (!array_key_exists($dataSaisie['type_demande'], MAIRE_ETAT_CIVIL_TYPES)) {
+    $dataSaisie['type_demande'] = '';
+}
+
+$flash = '';
+$flashType = 'success';
+$demandeGeneree = null;
+
+if (isset($_SESSION['etat_civil_demande_ok'])) {
+    $demandeGeneree = $_SESSION['etat_civil_demande_ok'];
+    unset($_SESSION['etat_civil_demande_ok']);
+    $flash = 'Demande enregistrée avec succès.';
+    $flashType = 'success';
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
+    if (!maire_csrf_validate($csrfScope)) {
+        $flash = 'Jeton de sécurité invalide. Rechargez la page.';
+        $flashType = 'danger';
+    } elseif (!maire_rate_limit_allow('etat_civil_demande', 6, 600)) {
+        $flash = 'Trop de demandes depuis cette connexion. Réessayez dans quelques minutes.';
+        $flashType = 'danger';
     } else {
-        $reference = 'EC-' . date('Ymd') . '-' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
-        $insert = $pdo->prepare("
-            INSERT INTO demandes_etat_civil
-            (reference_dossier, type_demande, nom_complet, email, telephone, cni, date_naissance, lieu_naissance, adresse, details)
-            VALUES
-            (:reference_dossier, :type_demande, :nom_complet, :email, :telephone, :cni, :date_naissance, :lieu_naissance, :adresse, :details)
-        ");
-        $insert->execute([
-            'reference_dossier' => $reference,
-            'type_demande' => $typeDemande,
-            'nom_complet' => $nomComplet,
-            'email' => $email,
-            'telephone' => $telephone !== '' ? $telephone : null,
-            'cni' => $cni !== '' ? $cni : null,
-            'date_naissance' => $dateNaissance !== '' ? $dateNaissance : null,
-            'lieu_naissance' => $lieuNaissance !== '' ? $lieuNaissance : null,
-            'adresse' => $adresse !== '' ? $adresse : null,
-            'details' => $details !== '' ? $details : null,
-        ]);
-
-        $demandeId = (int) $pdo->lastInsertId();
-        $uploadDir = __DIR__ . '/uploads/etat-civil';
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
-        }
-
-        if (isset($_FILES['pieces']) && is_array($_FILES['pieces']['name'])) {
-            $count = count($_FILES['pieces']['name']);
-            for ($i = 0; $i < $count; $i++) {
-                $errorCode = (int) ($_FILES['pieces']['error'][$i] ?? UPLOAD_ERR_NO_FILE);
-                if ($errorCode !== UPLOAD_ERR_OK) {
-                    continue;
-                }
-
-                $tmpName = (string) ($_FILES['pieces']['tmp_name'][$i] ?? '');
-                $originalName = (string) ($_FILES['pieces']['name'][$i] ?? '');
-                $size = (int) ($_FILES['pieces']['size'][$i] ?? 0);
-                if ($tmpName === '' || $originalName === '' || $size <= 0 || $size > 5 * 1024 * 1024) {
-                    continue;
-                }
-
-                $safeName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $originalName);
-                $storedName = $reference . '_' . ($i + 1) . '_' . $safeName;
-                $targetPath = $uploadDir . '/' . $storedName;
-
-                if (move_uploaded_file($tmpName, $targetPath)) {
-                    $relativePath = 'uploads/etat-civil/' . $storedName;
-                    $insertPiece = $pdo->prepare("
-                        INSERT INTO demandes_etat_civil_pieces (demande_id, nom_fichier, chemin_fichier)
-                        VALUES (:demande_id, :nom_fichier, :chemin_fichier)
-                    ");
-                    $insertPiece->execute([
-                        'demande_id' => $demandeId,
-                        'nom_fichier' => $originalName,
-                        'chemin_fichier' => $relativePath,
-                    ]);
-                    $piecesUploadees[] = $originalName;
-                }
-            }
-        }
-
-        $demandeGeneree = [
-            'reference' => $reference,
-            'type' => $typeDemande,
-            'nom' => $nomComplet,
-            'email' => $email,
-            'telephone' => $telephone,
-            'pieces' => $piecesUploadees,
+        $dataSaisie = [
+            'type_demande' => (string) ($_POST['type_demande'] ?? ''),
+            'nom_complet' => trim((string) ($_POST['nom_complet'] ?? '')),
+            'email' => trim((string) ($_POST['email'] ?? '')),
+            'telephone' => trim((string) ($_POST['telephone'] ?? '')),
+            'cni' => trim((string) ($_POST['cni'] ?? '')),
+            'date_naissance' => trim((string) ($_POST['date_naissance'] ?? '')),
+            'lieu_naissance' => trim((string) ($_POST['lieu_naissance'] ?? '')),
+            'adresse' => trim((string) ($_POST['adresse'] ?? '')),
+            'details' => trim((string) ($_POST['details'] ?? '')),
         ];
-        $feedback = 'Demande enregistree avec succes. Votre dossier est genere dans l application.';
+        $err = null;
+        $files = isset($_FILES['pieces']) ? $_FILES['pieces'] : null;
+        $result = maire_creer_demande_etat_civil($pdo, $dataSaisie, $files, $err);
+        if ($result === null) {
+            $flash = $err ?? 'Enregistrement impossible.';
+            $flashType = 'danger';
+        } else {
+            $_SESSION['etat_civil_demande_ok'] = $result;
+            header('Location: digitalisation-etat-civil.php?ok=1#recap', true, 303);
+            exit;
+        }
     }
 }
+
+$pageTitle = 'État civil en ligne | Rufisque-Est';
+$pageDescription = 'Déposez votre demande d’état civil en ligne : extrait de naissance, mariage, décès, légalisation.';
+require __DIR__ . '/includes/header.php';
+
+$checklistJson = json_encode(MAIRE_ETAT_CIVIL_CHECKLIST, JSON_UNESCAPED_UNICODE);
+$uploadRulesJson = json_encode([
+    'maxFiles' => MAIRE_ETAT_CIVIL_UPLOAD_MAX_FILES,
+    'maxBytes' => MAIRE_ETAT_CIVIL_UPLOAD_MAX_BYTES,
+    'acceptedTypes' => maire_etat_civil_mimes_autorises(),
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 ?>
 <main class="overflow-hidden">
-    <!-- HERO -->
-    <section class="relative maire-hero-bg text-white py-24 maire-grain">
+    <section class="relative maire-hero-bg text-white py-20 md:py-24 maire-grain overflow-hidden">
         <div class="absolute -top-32 -right-32 w-[35rem] h-[35rem] bg-gold-500/30 maire-blob blur-3xl pointer-events-none" aria-hidden="true"></div>
-        <div class="absolute -bottom-32 -left-32 w-[35rem] h-[35rem] bg-emerald-400/30 maire-blob blur-3xl pointer-events-none" style="animation-delay: -10s;" aria-hidden="true"></div>
-
-        <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-            <div class="flex flex-wrap items-end justify-between gap-8">
-                <div class="max-w-2xl">
-                    <span class="maire-tag bg-white/10 backdrop-blur-sm border border-white/20 text-gold-300 mb-5">
-                        <span class="w-1.5 h-1.5 rounded-full bg-gold-400 animate-pulse"></span>
-                        État civil · Portail communal
-                    </span>
-                    <h1 class="text-5xl md:text-6xl lg:text-7xl font-black leading-[0.95] tracking-tight mb-5">
-                        Digitalisation<br><span class="maire-text-gradient">de l'État civil</span>
-                    </h1>
-                    <p class="text-lg text-mairie-100 leading-relaxed">
-                        Une expérience numérique moderne pour déposer, suivre et finaliser vos démarches d'état civil.
-                    </p>
-                </div>
-                <div class="grid grid-cols-3 gap-3 min-w-[340px]">
-                    <div class="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20">
-                        <p class="text-3xl font-black"><span class="maire-counter" data-target="3">0</span><span class="text-lg ml-1">min</span></p>
-                        <p class="text-[10px] text-mairie-200 uppercase tracking-wider font-bold mt-1">Pré-demande</p>
-                    </div>
-                    <div class="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20">
-                        <p class="text-3xl font-black">24<span class="text-lg">/7</span></p>
-                        <p class="text-[10px] text-mairie-200 uppercase tracking-wider font-bold mt-1">Accès suivi</p>
-                    </div>
-                    <div class="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20">
-                        <p class="text-3xl font-black"><span class="maire-counter" data-target="72" data-suffix="h">0</span></p>
-                        <p class="text-[10px] text-mairie-200 uppercase tracking-wider font-bold mt-1">Délai cible</p>
-                    </div>
-                </div>
+        <div class="absolute inset-0 opacity-[0.08] pointer-events-none" style="background-image: linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px); background-size: 44px 44px;" aria-hidden="true"></div>
+        <div class="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 relative z-10">
+            <span class="maire-section-kicker mb-4 !bg-white/12 !text-white !border-white/20">
+                <span class="w-1.5 h-1.5 rounded-full bg-gold-400 animate-pulse"></span>
+                État civil numérique
+            </span>
+            <h1 class="text-4xl md:text-5xl lg:text-6xl font-black leading-tight mb-4">
+                Démarches d’<span class="maire-text-gradient">état civil</span> en ligne
+            </h1>
+            <p class="text-lg text-mairie-100 max-w-2xl leading-relaxed mb-6">
+                Déposez votre dossier en quelques minutes, joignez vos pièces et suivez l’avancement avec votre référence unique.
+            </p>
+            <div class="flex flex-wrap gap-3">
+                <a href="#form-demande-etat-civil" class="tw-btn-primary bg-gold-500 hover:bg-gold-400 text-mairie-950 shadow-lg">Démarrer une demande</a>
+                <a href="suivi-etat-civil.php" class="tw-btn-outline border-white/40 text-white hover:bg-white/10">Suivre un dossier</a>
             </div>
         </div>
     </section>
 
-    <!-- SERVICES DISPONIBLES -->
-    <section class="py-16 bg-slate-50 dark:bg-slate-900">
-        <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-10">
-                <span class="maire-tag bg-mairie-100 text-mairie-800 dark:bg-mairie-900/40 dark:text-mairie-200 mb-3">Catalogue</span>
-                <h2 class="text-3xl md:text-4xl font-black text-slate-900 dark:text-white">Services <span class="maire-text-gradient">disponibles</span></h2>
-            </div>
-            <div class="grid md:grid-cols-3 gap-6">
-                <article class="maire-bento-card tw-card p-7">
-                    <span class="inline-flex w-14 h-14 mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white items-center justify-center text-2xl shadow-md">👶</span>
-                    <span class="maire-tag bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200 mb-2">Naissance</span>
-                    <h3 class="text-lg font-black text-slate-900 dark:text-white mb-2">Demande d'extrait de naissance</h3>
-                    <p class="text-sm text-slate-600 dark:text-slate-400">Pré-enregistrement du dossier, vérification des pièces et suivi en ligne.</p>
-                </article>
-                <article class="maire-bento-card tw-card p-7">
-                    <span class="inline-flex w-14 h-14 mb-4 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 text-white items-center justify-center text-2xl shadow-md">💍</span>
-                    <span class="maire-tag bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200 mb-2">Mariage</span>
-                    <h3 class="text-lg font-black text-slate-900 dark:text-white mb-2">Ouverture de dossier de mariage</h3>
-                    <p class="text-sm text-slate-600 dark:text-slate-400">Soumission des informations des deux parties et contrôle administratif.</p>
-                </article>
-                <article class="maire-bento-card tw-card p-7">
-                    <span class="inline-flex w-14 h-14 mb-4 rounded-2xl bg-gradient-to-br from-slate-500 to-slate-700 text-white items-center justify-center text-2xl shadow-md">📜</span>
-                    <span class="maire-tag bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200 mb-2">Décès &amp; légalisation</span>
-                    <h3 class="text-lg font-black text-slate-900 dark:text-white mb-2">Actes de décès et légalisation</h3>
-                    <p class="text-sm text-slate-600 dark:text-slate-400">Démarche guidée avec checklist et suivi des étapes jusqu'au retrait.</p>
-                </article>
-            </div>
-        </div>
-    </section>
-
-    <!-- PARCOURS GUIDÉ -->
-    <section class="py-16 bg-white dark:bg-slate-950">
-        <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-12">
-                <span class="maire-tag bg-gold-50 text-gold-700 dark:bg-gold-900/30 dark:text-gold-300 mb-3">Comment ça marche</span>
-                <h2 class="text-3xl md:text-4xl font-black text-slate-900 dark:text-white">Parcours 100% <span class="maire-text-gradient">guidé</span></h2>
-            </div>
-            <div class="grid md:grid-cols-4 gap-5 relative">
-                <div class="hidden md:block absolute top-12 left-[12.5%] right-[12.5%] h-0.5 bg-gradient-to-r from-mairie-300 via-gold-400 to-emerald-300" aria-hidden="true"></div>
+    <section class="py-12 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
+        <div class="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <?php
                 $steps = [
-                    ['n' => 1, 'titre' => 'Pré-demande', 'desc' => "Vous remplissez le formulaire numérique et choisissez le type d'acte.", 'gradient' => 'from-mairie-700 to-mairie-900'],
-                    ['n' => 2, 'titre' => 'Dépôt des pièces', 'desc' => "Upload des justificatifs, vérification automatique des champs obligatoires.", 'gradient' => 'from-blue-500 to-indigo-600'],
-                    ['n' => 3, 'titre' => 'Suivi intelligent', 'desc' => "État du dossier en direct : reçu, en cours, validé, prêt à retirer.", 'gradient' => 'from-gold-500 to-orange-600'],
-                    ['n' => 4, 'titre' => 'Retrait simplifié', 'desc' => "Notification de disponibilité et retrait au guichet avec référence unique.", 'gradient' => 'from-emerald-500 to-teal-600'],
+                    ['1', 'Type & coordonnées', 'Choisissez l’acte et vos contacts'],
+                    ['2', 'Informations', 'Complétez le dossier'],
+                    ['3', 'Pièces & envoi', 'Scannez vos justificatifs'],
+                    ['✓', 'Suivi', 'Référence EC-… et reçu'],
                 ];
                 foreach ($steps as $s):
                 ?>
-                <article class="tw-card p-6 text-center relative">
-                    <div class="relative inline-flex w-20 h-20 mb-4 rounded-2xl bg-gradient-to-br <?php echo $s['gradient']; ?> text-white items-center justify-center text-3xl font-black shadow-glow"><?php echo $s['n']; ?></div>
-                    <h3 class="text-base font-black text-slate-900 dark:text-white mb-2"><?php echo $s['titre']; ?></h3>
-                    <p class="text-sm text-slate-600 dark:text-slate-400"><?php echo $s['desc']; ?></p>
-                </article>
+                <div class="maire-kpi-card text-center">
+                    <p class="text-2xl font-black text-mairie-800 dark:text-mairie-200 mb-1"><?php echo $s[0]; ?></p>
+                    <p class="text-sm font-bold text-slate-900 dark:text-white"><?php echo htmlspecialchars($s[1], ENT_QUOTES, 'UTF-8'); ?></p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1"><?php echo htmlspecialchars($s[2], ENT_QUOTES, 'UTF-8'); ?></p>
+                </div>
                 <?php endforeach; ?>
             </div>
         </div>
     </section>
 
-    <!-- FORMULAIRE -->
-    <section class="py-16 bg-slate-50 dark:bg-slate-900" id="form-demande-etat-civil">
-        <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-10">
-                <span class="maire-tag bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200 mb-3">Formulaire en ligne</span>
-                <h2 class="text-3xl md:text-4xl font-black text-slate-900 dark:text-white">Soumettre une <span class="maire-text-gradient">demande</span></h2>
+    <section class="py-14 bg-slate-50 dark:bg-slate-900">
+        <div class="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl md:text-3xl font-black text-slate-900 dark:text-white">Choisissez votre <span class="maire-text-gradient">démarche</span></h2>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+                <?php
+                $cards = [
+                    ['extrait_naissance', 'Naissance', 'Extrait de naissance', 'from-emerald-500 to-teal-600'],
+                    ['dossier_mariage', 'Mariage', 'Ouverture de dossier', 'from-rose-500 to-pink-600'],
+                    ['acte_deces', 'Décès', 'Acte de décès', 'from-slate-500 to-slate-700'],
+                    ['legalisation', 'Légalisation', 'Copie conforme', 'from-mairie-700 to-mairie-900'],
+                ];
+                foreach ($cards as [$code, $tag, $titre, $grad]):
+                    $isSelectedType = $dataSaisie['type_demande'] === $code;
+                ?>
+                <button type="button" class="maire-editorial-card maire-bento-card p-5 text-left w-full js-pick-type <?php echo $isSelectedType ? 'is-selected' : ''; ?>" data-type="<?php echo htmlspecialchars($code, ENT_QUOTES, 'UTF-8'); ?>" aria-pressed="<?php echo $isSelectedType ? 'true' : 'false'; ?>">
+                    <span class="inline-block text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r <?php echo $grad; ?> text-white mb-2"><?php echo htmlspecialchars($tag, ENT_QUOTES, 'UTF-8'); ?></span>
+                    <h3 class="font-black text-slate-900 dark:text-white text-sm"><?php echo htmlspecialchars($titre, ENT_QUOTES, 'UTF-8'); ?></h3>
+                </button>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-16 bg-white dark:bg-slate-950" id="form-demande-etat-civil">
+        <div class="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <?php if ($demandeGeneree === null): ?>
+            <div class="max-w-3xl mx-auto mb-8">
+                <h2 class="text-2xl md:text-3xl font-black text-slate-900 dark:text-white text-center mb-2">Formulaire en ligne</h2>
+                <p class="text-center text-sm text-slate-600 dark:text-slate-400">3 étapes · environ 3 minutes</p>
             </div>
 
-            <?php if ($feedback !== null): ?>
-                <div class="<?php echo $feedbackError ? 'bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800 text-red-800 dark:text-red-200' : 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'; ?> border-2 rounded-2xl p-4 mb-6 flex items-start gap-3">
-                    <span class="text-2xl flex-shrink-0"><?php echo $feedbackError ? '⚠️' : '✅'; ?></span>
-                    <p class="font-bold"><?php echo htmlspecialchars($feedback); ?></p>
+            <?php if ($flash !== '' && $demandeGeneree === null): ?>
+                <div class="max-w-3xl mx-auto mb-6 <?php echo $flashType === 'danger' ? 'bg-red-50 dark:bg-red-950/30 border-red-300 text-red-800' : 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 text-emerald-800'; ?> border-2 rounded-2xl p-4">
+                    <p class="font-bold"><?php echo htmlspecialchars($flash, ENT_QUOTES, 'UTF-8'); ?></p>
                 </div>
             <?php endif; ?>
 
-            <div class="grid lg:grid-cols-[1.4fr_1fr] gap-6">
-                <article class="tw-card p-7 md:p-10">
-                    <form method="POST" enctype="multipart/form-data" class="grid sm:grid-cols-2 gap-4">
-                        <div class="sm:col-span-2">
-                            <label for="type_demande" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Type de demande *</label>
-                            <select id="type_demande" name="type_demande" required class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
-                                <option value="">Choisir...</option>
-                                <option value="extrait_naissance">👶 Extrait de naissance</option>
-                                <option value="dossier_mariage">💍 Dossier de mariage</option>
-                                <option value="acte_deces">📜 Acte de décès</option>
-                                <option value="legalisation">🛡 Légalisation</option>
-                            </select>
+            <?php if (!$citoyenConnecte): ?>
+                <p class="max-w-3xl mx-auto text-sm text-slate-600 dark:text-slate-400 mb-6 text-center">
+                    <a class="font-bold text-mairie-700 dark:text-mairie-300 underline" href="citoyen/connexion.php">Connectez-vous</a>
+                    pour préremplir vos coordonnées.
+                </p>
+            <?php endif; ?>
+
+            <div class="grid lg:grid-cols-[1fr_280px] gap-8 max-w-5xl mx-auto">
+                <article class="maire-form-shell">
+                    <nav class="maire-wizard-steps mb-8" aria-label="Étapes">
+                        <div class="maire-wizard-step is-active" data-wizard-step-indicator="1">
+                            <span class="maire-wizard-step__dot">1</span>
+                            <span class="maire-wizard-step__label">Démarche</span>
                         </div>
-                        <div class="sm:col-span-2">
-                            <label for="nom_complet" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Nom complet *</label>
-                            <input id="nom_complet" name="nom_complet" type="text" required class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+                        <div class="maire-wizard-bar" aria-hidden="true"></div>
+                        <div class="maire-wizard-step" data-wizard-step-indicator="2">
+                            <span class="maire-wizard-step__dot">2</span>
+                            <span class="maire-wizard-step__label">Dossier</span>
                         </div>
-                        <div>
-                            <label for="email" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Email *</label>
-                            <input id="email" name="email" type="email" required class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+                        <div class="maire-wizard-bar" aria-hidden="true"></div>
+                        <div class="maire-wizard-step" data-wizard-step-indicator="3">
+                            <span class="maire-wizard-step__dot">3</span>
+                            <span class="maire-wizard-step__label">Envoi</span>
                         </div>
-                        <div>
-                            <label for="telephone" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Téléphone</label>
-                            <input id="telephone" name="telephone" type="text" class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+                    </nav>
+
+                    <form method="post" enctype="multipart/form-data" id="form-etat-civil" class="space-y-5" novalidate>
+                        <?php echo maire_csrf_field($csrfScope); ?>
+
+                        <div class="maire-wizard-panel" data-wizard-step="1">
+                            <div>
+                                <label for="type_demande" class="block text-sm font-bold mb-1.5">Type de demande *</label>
+                                <select id="type_demande" name="type_demande" required class="tw-input">
+                                    <option value="">Choisir…</option>
+                                    <?php foreach (MAIRE_ETAT_CIVIL_TYPES as $code => $label): ?>
+                                        <option value="<?php echo htmlspecialchars($code, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $dataSaisie['type_demande'] === $code ? 'selected' : ''; ?>><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="nom_complet" class="block text-sm font-bold mb-1.5">Nom complet *</label>
+                                <input id="nom_complet" name="nom_complet" type="text" required maxlength="160" class="tw-input" value="<?php echo htmlspecialchars($dataSaisie['nom_complet'], ENT_QUOTES, 'UTF-8'); ?>">
+                            </div>
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="email" class="block text-sm font-bold mb-1.5">Email *</label>
+                                    <input id="email" name="email" type="email" required maxlength="190" class="tw-input" value="<?php echo htmlspecialchars($dataSaisie['email'], ENT_QUOTES, 'UTF-8'); ?>">
+                                </div>
+                                <div>
+                                    <label for="telephone" class="block text-sm font-bold mb-1.5">Téléphone</label>
+                                    <input id="telephone" name="telephone" type="tel" maxlength="40" class="tw-input" placeholder="77 123 45 67" value="<?php echo htmlspecialchars($dataSaisie['telephone'], ENT_QUOTES, 'UTF-8'); ?>">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="cni" class="block text-sm font-bold mb-1.5">N° CNI / passeport</label>
+                                <input id="cni" name="cni" type="text" maxlength="80" class="tw-input" value="<?php echo htmlspecialchars($dataSaisie['cni'], ENT_QUOTES, 'UTF-8'); ?>">
+                            </div>
                         </div>
-                        <div>
-                            <label for="cni" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Numéro CNI</label>
-                            <input id="cni" name="cni" type="text" class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+
+                        <div class="maire-wizard-panel" data-wizard-step="2" hidden>
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="date_naissance" class="block text-sm font-bold mb-1.5">Date de naissance</label>
+                                    <input id="date_naissance" name="date_naissance" type="date" class="tw-input" value="<?php echo htmlspecialchars($dataSaisie['date_naissance'], ENT_QUOTES, 'UTF-8'); ?>">
+                                </div>
+                                <div>
+                                    <label for="lieu_naissance" class="block text-sm font-bold mb-1.5">Lieu de naissance</label>
+                                    <input id="lieu_naissance" name="lieu_naissance" type="text" maxlength="160" class="tw-input" value="<?php echo htmlspecialchars($dataSaisie['lieu_naissance'], ENT_QUOTES, 'UTF-8'); ?>">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="adresse" class="block text-sm font-bold mb-1.5">Adresse</label>
+                                <textarea id="adresse" name="adresse" rows="2" class="tw-input resize-y"><?php echo htmlspecialchars($dataSaisie['adresse'], ENT_QUOTES, 'UTF-8'); ?></textarea>
+                            </div>
+                            <div>
+                                <label for="details" class="block text-sm font-bold mb-1.5">Précisions utiles</label>
+                                <textarea id="details" name="details" rows="3" class="tw-input resize-y" placeholder="Noms des parents, numéro d’acte si connu, urgence…"><?php echo htmlspecialchars($dataSaisie['details'], ENT_QUOTES, 'UTF-8'); ?></textarea>
+                            </div>
                         </div>
-                        <div>
-                            <label for="date_naissance" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Date de naissance</label>
-                            <input id="date_naissance" name="date_naissance" type="date" class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+
+                        <div class="maire-wizard-panel" data-wizard-step="3" hidden>
+                            <div>
+                                <label for="pieces" class="block text-sm font-bold mb-1.5">Pièces justificatives <span class="font-normal text-slate-500">(PDF, JPG, PNG — max 5 fichiers × 5 Mo)</span></label>
+                                <input id="pieces" name="pieces[]" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" data-max-files="<?php echo MAIRE_ETAT_CIVIL_UPLOAD_MAX_FILES; ?>" data-max-bytes="<?php echo MAIRE_ETAT_CIVIL_UPLOAD_MAX_BYTES; ?>" class="tw-input file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:font-bold file:bg-mairie-700 file:text-white">
+                                <p id="ec-files-feedback" class="mt-2 text-xs text-slate-500 dark:text-slate-400">Aucun fichier sélectionné.</p>
+                            </div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">Les pièces peuvent aussi être déposées au guichet avec votre référence.</p>
                         </div>
-                        <div class="sm:col-span-2">
-                            <label for="lieu_naissance" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Lieu de naissance</label>
-                            <input id="lieu_naissance" name="lieu_naissance" type="text" class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
-                        </div>
-                        <div class="sm:col-span-2">
-                            <label for="adresse" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Adresse</label>
-                            <textarea id="adresse" name="adresse" rows="2" class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition resize-y"></textarea>
-                        </div>
-                        <div class="sm:col-span-2">
-                            <label for="details" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Détails de la demande</label>
-                            <textarea id="details" name="details" rows="3" class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition resize-y"></textarea>
-                        </div>
-                        <div class="sm:col-span-2">
-                            <label for="pieces" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Pièces justificatives <small class="font-normal text-slate-500">(PDF/JPG/PNG, max 5MB/fichier)</small></label>
-                            <input id="pieces" name="pieces[]" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-mairie-500 outline-none transition file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:font-bold file:bg-mairie-700 file:text-white hover:file:bg-mairie-800">
-                        </div>
-                        <div class="sm:col-span-2 mt-2">
-                            <button class="tw-btn-primary w-full justify-center" type="submit">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                                Générer mon dossier
-                            </button>
+
+                        <div class="flex flex-wrap gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
+                            <button type="button" id="ec-prev" class="tw-btn-outline hidden">← Précédent</button>
+                            <button type="button" id="ec-next" class="tw-btn-primary flex-1 justify-center">Continuer →</button>
+                            <button type="submit" id="ec-submit" class="tw-btn-primary flex-1 justify-center hidden">Enregistrer mon dossier</button>
                         </div>
                     </form>
                 </article>
 
-                <article class="relative rounded-3xl overflow-hidden bg-gradient-to-br from-mairie-800 to-mairie-950 text-white p-7">
-                    <div class="absolute -top-12 -right-12 w-60 h-60 bg-gold-500/30 rounded-full blur-3xl maire-blob pointer-events-none"></div>
-                    <div class="relative">
-                        <h3 class="text-xl font-black mb-4 flex items-center gap-2">
-                            <span class="w-10 h-10 rounded-xl bg-gold-400 text-mairie-950 flex items-center justify-center">📃</span>
-                            Récapitulatif
-                        </h3>
-                        <?php if ($demandeGeneree !== null): ?>
-                            <div class="space-y-2 text-sm" id="demandeReceipt">
-                                <p><span class="text-mairie-300 font-bold">Référence :</span> <code class="px-2 py-0.5 rounded bg-white/10 font-mono"><?php echo htmlspecialchars($demandeGeneree['reference']); ?></code></p>
-                                <p><span class="text-mairie-300 font-bold">Type :</span> <?php echo htmlspecialchars($demandeGeneree['type']); ?></p>
-                                <p><span class="text-mairie-300 font-bold">Demandeur :</span> <?php echo htmlspecialchars($demandeGeneree['nom']); ?></p>
-                                <p><span class="text-mairie-300 font-bold">Email :</span> <?php echo htmlspecialchars($demandeGeneree['email']); ?></p>
-                                <p><span class="text-mairie-300 font-bold">Téléphone :</span> <?php echo htmlspecialchars($demandeGeneree['telephone'] !== '' ? $demandeGeneree['telephone'] : 'Non renseigné'); ?></p>
-                                <p><span class="text-mairie-300 font-bold">Statut :</span> <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gold-400/30 text-gold-300 text-xs font-black uppercase">Reçu</span></p>
-                                <p><span class="text-mairie-300 font-bold">Date :</span> <?php echo date('d/m/Y H:i'); ?></p>
-                                <p><span class="text-mairie-300 font-bold">Pièces :</span> <?php echo htmlspecialchars(!empty($demandeGeneree['pieces']) ? implode(', ', $demandeGeneree['pieces']) : 'Aucune'); ?></p>
-                            </div>
-                            <div class="flex flex-wrap gap-2 mt-5">
-                                <button class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white text-xs font-bold transition-colors" type="button" onclick="window.print()">🖨 Imprimer</button>
-                                <a class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white text-xs font-bold transition-colors" href="telecharger-recepisse.php?ref=<?php echo urlencode($demandeGeneree['reference']); ?>">📄 PDF</a>
-                                <a class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-gold-400 hover:bg-gold-300 text-mairie-950 text-xs font-black transition-colors" href="suivi-etat-civil.php?ref=<?php echo urlencode($demandeGeneree['reference']); ?>">Suivre →</a>
-                            </div>
-                        <?php else: ?>
-                            <div class="text-center py-8 opacity-70">
-                                <div class="text-5xl mb-3">📋</div>
-                                <p class="text-sm text-mairie-200">Une fois la demande soumise, votre référence de dossier sera affichée ici avec un récépissé imprimable.</p>
-                            </div>
-                        <?php endif; ?>
+                <aside class="maire-panel p-5 h-fit sticky top-24">
+                    <h3 class="text-sm font-black uppercase tracking-wide text-slate-700 dark:text-slate-300 mb-3">Pièces à prévoir</h3>
+                    <ul id="ec-checklist" class="text-sm text-slate-600 dark:text-slate-400 space-y-2 list-disc list-inside">
+                        <li>Sélectionnez un type de demande</li>
+                    </ul>
+                </aside>
+            </div>
+
+            <?php else: ?>
+            <div id="recap" class="max-w-2xl mx-auto">
+                <?php if ($flash !== ''): ?>
+                    <div class="bg-emerald-50 dark:bg-emerald-950/30 border-2 border-emerald-300 rounded-2xl p-4 mb-6">
+                        <p class="font-bold text-emerald-900 dark:text-emerald-100"><?php echo htmlspecialchars($flash, ENT_QUOTES, 'UTF-8'); ?></p>
+                    </div>
+                <?php endif; ?>
+                <article class="maire-panel p-8 text-center">
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Votre référence</p>
+                    <p class="text-3xl font-black font-mono text-mairie-800 dark:text-mairie-200 mb-6"><?php echo htmlspecialchars((string) $demandeGeneree['reference'], ENT_QUOTES, 'UTF-8'); ?></p>
+                    <dl class="text-left text-sm space-y-2 mb-6 text-slate-700 dark:text-slate-300">
+                        <div class="flex justify-between gap-4"><dt class="font-bold">Type</dt><dd><?php echo htmlspecialchars((string) ($demandeGeneree['type_libelle'] ?? $demandeGeneree['type']), ENT_QUOTES, 'UTF-8'); ?></dd></div>
+                        <div class="flex justify-between gap-4"><dt class="font-bold">Demandeur</dt><dd><?php echo htmlspecialchars((string) $demandeGeneree['nom'], ENT_QUOTES, 'UTF-8'); ?></dd></div>
+                        <div class="flex justify-between gap-4"><dt class="font-bold">Pièces jointes</dt><dd><?php echo !empty($demandeGeneree['pieces']) ? count($demandeGeneree['pieces']) : 0; ?></dd></div>
+                    </dl>
+                    <div class="flex flex-wrap justify-center gap-3">
+                        <a class="tw-btn-primary" href="suivi-etat-civil.php?ref=<?php echo urlencode((string) $demandeGeneree['reference']); ?>">Suivre mon dossier</a>
+                        <a class="tw-btn-outline" href="telecharger-recepisse.php?ref=<?php echo urlencode((string) $demandeGeneree['reference']); ?>">Télécharger le reçu</a>
+                        <a class="tw-btn-ghost text-sm" href="digitalisation-etat-civil.php">Nouvelle demande</a>
                     </div>
                 </article>
             </div>
+            <?php endif; ?>
         </div>
     </section>
 </main>
+<?php if ($demandeGeneree === null): ?>
+<style>
+    .js-pick-type {
+        border: 2px solid transparent;
+        transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+
+    .js-pick-type:hover,
+    .js-pick-type:focus-visible {
+        transform: translateY(-2px);
+    }
+
+    .js-pick-type.is-selected {
+        transform: translateY(-2px);
+        border-color: rgba(14, 116, 144, 0.9);
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+        background: rgba(240, 249, 255, 0.95);
+    }
+
+    .dark .js-pick-type.is-selected {
+        background: rgba(15, 23, 42, 0.92);
+        box-shadow: 0 18px 45px rgba(2, 6, 23, 0.45);
+    }
+</style>
+<script>
+(function () {
+    const CHECKLIST = <?php echo $checklistJson; ?>;
+    const UPLOAD_RULES = <?php echo $uploadRulesJson; ?>;
+    const form = document.getElementById('form-etat-civil');
+    if (!form) return;
+
+    const TOTAL = 3;
+    let step = 1;
+    const panels = form.querySelectorAll('[data-wizard-step]');
+    const indicators = document.querySelectorAll('[data-wizard-step-indicator]');
+    const btnPrev = document.getElementById('ec-prev');
+    const btnNext = document.getElementById('ec-next');
+    const btnSubmit = document.getElementById('ec-submit');
+    const typeSelect = document.getElementById('type_demande');
+    const checklistEl = document.getElementById('ec-checklist');
+    const typeButtons = document.querySelectorAll('.js-pick-type');
+    const fileInput = document.getElementById('pieces');
+    const fileFeedback = document.getElementById('ec-files-feedback');
+
+    function updateChecklist() {
+        const t = typeSelect ? typeSelect.value : '';
+        if (!checklistEl) return;
+        if (!t || !CHECKLIST[t]) {
+            checklistEl.innerHTML = '<li>Sélectionnez un type de demande</li>';
+            return;
+        }
+        checklistEl.innerHTML = CHECKLIST[t].map(function (item) {
+            return '<li>' + item.replace(/</g, '&lt;') + '</li>';
+        }).join('');
+    }
+
+    function updateTypeCards() {
+        const selectedType = typeSelect ? typeSelect.value : '';
+        typeButtons.forEach(function (btn) {
+            const isSelected = btn.getAttribute('data-type') === selectedType;
+            btn.classList.toggle('is-selected', isSelected);
+            btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+        });
+    }
+
+    function setFileFeedback(message, isError) {
+        if (!fileFeedback) return;
+        fileFeedback.textContent = message;
+        fileFeedback.className = isError
+            ? 'mt-2 text-xs font-bold text-red-700 dark:text-red-300'
+            : 'mt-2 text-xs text-slate-500 dark:text-slate-400';
+    }
+
+    function validateFiles() {
+        if (!fileInput) return true;
+
+        const files = Array.from(fileInput.files || []);
+        if (files.length === 0) {
+            fileInput.setCustomValidity('');
+            setFileFeedback('Aucun fichier sélectionné.', false);
+            return true;
+        }
+
+        if (files.length > UPLOAD_RULES.maxFiles) {
+            const message = 'Maximum ' + UPLOAD_RULES.maxFiles + ' fichiers autorisés.';
+            fileInput.setCustomValidity(message);
+            setFileFeedback(message, true);
+            return false;
+        }
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (file.size > UPLOAD_RULES.maxBytes) {
+                const message = '"' + file.name + '" dépasse 5 Mo.';
+                fileInput.setCustomValidity(message);
+                setFileFeedback(message, true);
+                return false;
+            }
+            if (file.type && !UPLOAD_RULES.acceptedTypes.includes(file.type)) {
+                const message = '"' + file.name + '" n’est pas au bon format.';
+                fileInput.setCustomValidity(message);
+                setFileFeedback(message + ' Formats acceptés : PDF, JPG, PNG.', true);
+                return false;
+            }
+        }
+
+        fileInput.setCustomValidity('');
+        setFileFeedback(files.length + ' fichier' + (files.length > 1 ? 's' : '') + ' prêt' + (files.length > 1 ? 's' : '') + ' à être envoyé' + (files.length > 1 ? 's' : '') + '.', false);
+        return true;
+    }
+
+    function showStep(n) {
+        step = n;
+        panels.forEach(function (p) {
+            p.hidden = parseInt(p.getAttribute('data-wizard-step'), 10) !== n;
+        });
+        indicators.forEach(function (ind) {
+            const s = parseInt(ind.getAttribute('data-wizard-step-indicator'), 10);
+            ind.classList.toggle('is-active', s === n);
+            ind.classList.toggle('is-done', s < n);
+        });
+        if (btnPrev) btnPrev.classList.toggle('hidden', n <= 1);
+        if (btnNext) btnNext.classList.toggle('hidden', n >= TOTAL);
+        if (btnSubmit) btnSubmit.classList.toggle('hidden', n < TOTAL);
+    }
+
+    function validatePanel(n) {
+        const panel = form.querySelector('[data-wizard-step="' + n + '"]');
+        if (!panel) return true;
+        const fields = panel.querySelectorAll('input, select, textarea');
+        for (let i = 0; i < fields.length; i++) {
+            const el = fields[i];
+            if (el.disabled || el.type === 'hidden' || el.type === 'file') continue;
+            if (!el.checkValidity()) {
+                el.reportValidity();
+                el.focus();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    if (typeSelect) {
+        typeSelect.addEventListener('change', function () {
+            updateChecklist();
+            updateTypeCards();
+        });
+        updateChecklist();
+        updateTypeCards();
+    }
+
+    if (fileInput) {
+        fileInput.addEventListener('change', validateFiles);
+        validateFiles();
+    }
+
+    document.querySelectorAll('.js-pick-type').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const t = btn.getAttribute('data-type');
+            if (typeSelect && t) {
+                typeSelect.value = t;
+                updateChecklist();
+                updateTypeCards();
+            }
+            document.getElementById('form-demande-etat-civil')?.scrollIntoView({ behavior: 'smooth' });
+            showStep(1);
+        });
+    });
+
+    if (btnNext) {
+        btnNext.addEventListener('click', function () {
+            if (!validatePanel(step)) return;
+            showStep(Math.min(TOTAL, step + 1));
+        });
+    }
+    if (btnPrev) {
+        btnPrev.addEventListener('click', function () { showStep(Math.max(1, step - 1)); });
+    }
+
+    form.addEventListener('submit', function (e) {
+        if (step < TOTAL) { e.preventDefault(); return; }
+        if (!validateFiles()) {
+            e.preventDefault();
+            showStep(3);
+            fileInput?.reportValidity();
+            return;
+        }
+        for (let s = 1; s <= TOTAL; s++) {
+            if (!validatePanel(s)) {
+                e.preventDefault();
+                showStep(s);
+                return;
+            }
+        }
+    });
+
+    showStep(1);
+
+    <?php if ($flashType === 'danger'): ?>
+    showStep(<?php echo strpos($flash, 'fichier') !== false || strpos($flash, 'Format') !== false || strpos($flash, 'maximum') !== false ? 3 : (strpos($flash, 'email') !== false || strpos($flash, 'Nom') !== false ? 1 : 2); ?>);
+    <?php endif; ?>
+})();
+</script>
+<?php endif; ?>
 <?php require __DIR__ . '/includes/footer.php'; ?>

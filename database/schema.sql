@@ -52,10 +52,14 @@ CREATE TABLE IF NOT EXISTS super_admins (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Compte de démonstration (à supprimer ou changer en production).
+-- ⚠ COMPTE DE DÉMONSTRATION (commenté par défaut pour la production).
+-- Pour le créer en DEV uniquement : décommentez la requête ci-dessous.
 -- Identifiants : editeur@demo.rufisque.sn / DemoEditeur2026!
-INSERT IGNORE INTO super_admins (email, nom, mot_de_passe_hash, actif)
-VALUES ('editeur@demo.rufisque.sn', 'Éditeur (démonstration)', '$2y$12$8y7eKIqtLsZCi6t2HpjBROV72u8lMlQMjW5kbSUDhfMlgYjIZYbMO', 1);
+-- INSERT IGNORE INTO super_admins (email, nom, mot_de_passe_hash, actif)
+-- VALUES ('editeur@demo.rufisque.sn', 'Éditeur (démonstration)', '$2y$12$8y7eKIqtLsZCi6t2HpjBROV72u8lMlQMjW5kbSUDhfMlgYjIZYbMO', 1);
+--
+-- ✅ EN PRODUCTION : créez un vrai compte super-admin via l'interface
+--    super-admin/login.php ou directement en BDD avec password_hash().
 
 CREATE TABLE IF NOT EXISTS commune_abonnement_historique (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -153,13 +157,19 @@ INSERT INTO standard_hub_actualites (titre, resume, lien, badge, published_at) V
 ('Rappel renouvellement', 'La mairie prolonge la formule communale et les accès agents depuis l administration (Comptes & abonnement communal).', 'admin/abonnements.php', 'alert', '2026-04-22'),
 ('Cellule etat civil : creneaux etendus', 'Le mercredi, permanence supplementaire 16h30-18h00 sur rendez-vous.', 'digitalisation-etat-civil.php', 'info', '2026-04-18');
 
--- Comptes de demonstration (mot de passe: DemoStandard2026!) — INSERT IGNORE si email deja present
-INSERT IGNORE INTO abonnements (email, mot_de_passe_hash, plan, role_utilisateur, actif, compte_mairie, date_debut, date_fin) VALUES
-('admin@demo.rufisque.sn', '$2y$10$m8yeLjJsPEHeZghzYkzmLeIGYqDT6f8oUlR7iguBlvO/6wBlbtJgm', 'municipal_standard', 'admin', 1, 1, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 365 DAY)),
-('abonne@demo.rufisque.sn', '$2y$10$m8yeLjJsPEHeZghzYkzmLeIGYqDT6f8oUlR7iguBlvO/6wBlbtJgm', 'municipal_standard', 'admin', 1, 0, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 365 DAY));
-
--- Si la base existait déjà avec l’ancien rôle « subscriber » pour abonne@demo, remonter en admin (INSERT IGNORE ne met pas à jour).
-UPDATE abonnements SET role_utilisateur = 'admin' WHERE email = 'abonne@demo.rufisque.sn' LIMIT 1;
+-- ----------------------------------------------------------------------
+-- COMPTES MAIRIE DE DÉMONSTRATION (DÉVELOPPEMENT UNIQUEMENT)
+-- ----------------------------------------------------------------------
+-- ⚠️ NE PAS exécuter ces blocs en production.
+-- Pour activer en local : décommenter manuellement les requêtes ci-dessous.
+-- Identifiants : admin@demo.rufisque.sn et abonne@demo.rufisque.sn / DemoStandard2026!
+-- INSERT IGNORE INTO abonnements (email, mot_de_passe_hash, plan, role_utilisateur, actif, compte_mairie, date_debut, date_fin) VALUES
+-- ('admin@demo.rufisque.sn', '$2y$10$m8yeLjJsPEHeZghzYkzmLeIGYqDT6f8oUlR7iguBlvO/6wBlbtJgm', 'municipal_standard', 'admin', 1, 1, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 365 DAY)),
+-- ('abonne@demo.rufisque.sn', '$2y$10$m8yeLjJsPEHeZghzYkzmLeIGYqDT6f8oUlR7iguBlvO/6wBlbtJgm', 'municipal_standard', 'admin', 1, 0, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 365 DAY));
+-- UPDATE abonnements SET role_utilisateur = 'admin' WHERE email = 'abonne@demo.rufisque.sn' LIMIT 1;
+--
+-- ✅ EN PRODUCTION : créez un vrai compte mairie via la page d'inscription
+-- ou via le super-admin.
 
 -- =========================================================================
 -- ESPACE CITOYEN (habitants de la commune)
@@ -181,9 +191,14 @@ CREATE TABLE IF NOT EXISTS citoyens (
     INDEX idx_citoyens_actif (actif)
 );
 
--- Compte citoyen de démonstration (mot de passe : DemoCitoyen2026!)
-INSERT IGNORE INTO citoyens (email, mot_de_passe_hash, prenom, nom, telephone, quartier, actif) VALUES
-('citoyen@demo.rufisque.sn', '$2y$12$PLDKalb80QlKAy9DZLkqsuQT1l1jB3pVdwmS/LTHYqSCsK/gPMBQq', 'Aminata', 'Diop', '+221 77 000 00 00', 'Keury Souf', 1);
+-- ----------------------------------------------------------------------
+-- COMPTE CITOYEN DE DÉMONSTRATION (DÉVELOPPEMENT UNIQUEMENT)
+-- ----------------------------------------------------------------------
+-- ⚠️ NE PAS exécuter ce bloc en production.
+-- Pour activer en local : décommenter manuellement les 2 lignes ci-dessous.
+-- Identifiants : citoyen@demo.rufisque.sn / DemoCitoyen2026!
+-- INSERT IGNORE INTO citoyens (email, mot_de_passe_hash, prenom, nom, telephone, quartier, actif) VALUES
+-- ('citoyen@demo.rufisque.sn', '$2y$12$PLDKalb80QlKAy9DZLkqsuQT1l1jB3pVdwmS/LTHYqSCsK/gPMBQq', 'Aminata', 'Diop', NULL, 'Keury Souf', 1);
 
 -- =========================================================================
 -- SIGNALEMENTS CITOYENS

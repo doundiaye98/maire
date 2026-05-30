@@ -30,6 +30,7 @@ const MAIRE_FEATURES_PALIER_MIN = [
     'comptes_citoyens'        => 'standard',
     'signalements_citoyens'   => 'standard',
     'demandes_administratives'=> 'standard',
+    'audiences_maire'         => 'standard',
     'reservation_documents'   => 'standard',
 
     // Communication
@@ -59,6 +60,7 @@ const MAIRE_FEATURES_LIBELLES = [
     'comptes_citoyens'        => 'Comptes habitants',
     'signalements_citoyens'   => 'Signalements citoyens',
     'demandes_administratives'=> 'Demandes administratives en ligne',
+    'audiences_maire'         => 'Audiences en ligne avec le Maire',
     'reservation_documents'   => 'Réservation de documents',
     'notifications_email'     => 'Notifications email',
     'notifications_sms'       => 'Notifications SMS',

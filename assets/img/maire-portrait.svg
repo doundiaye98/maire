@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" role="img" aria-label="Portrait officiel d'Elimane Sakho Semb�ne  Maire de Rufisque-Est">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0c4a3e"/>
+      <stop offset="50%" stop-color="#1e5f48"/>
+      <stop offset="100%" stop-color="#2e7a5b"/>
+    </linearGradient>
+    <linearGradient id="goldShine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <radialGradient id="silhouette" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#1e5f48" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#0a3c34" stop-opacity="1"/>
+    </radialGradient>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2"/>
+      <feColorMatrix values="0 0 0 0 1   0 0 0 0 1   0 0 0 0 1   0 0 0 0.08 0"/>
+    </filter>
+  </defs>
+
+  <!-- Fond -->
+  <rect width="600" height="800" fill="url(#bgGradient)"/>
+
+  <!-- Blobs d�coratifs -->
+  <circle cx="120" cy="120" r="180" fill="#fbbf24" opacity="0.12"/>
+  <circle cx="500" cy="650" r="200" fill="#2e7a5b" opacity="0.18"/>
+
+  <!-- Silhouette stylis�e (homme �paule + t�te) -->
+  <g transform="translate(300, 460)">
+    <!-- �paules -->
+    <path d="M -200 340 Q -200 180 -90 140 L -50 130 Q 0 110 50 130 L 90 140 Q 200 180 200 340 L 200 360 L -200 360 Z" fill="url(#silhouette)"/>
+    <!-- Cou -->
+    <rect x="-40" y="70" width="80" height="80" rx="20" fill="url(#silhouette)"/>
+    <!-- T�te -->
+    <circle cx="0" cy="-30" r="130" fill="url(#silhouette)"/>
+    <!-- Cravate (touche d'or) -->
+    <path d="M -15 150 L 0 170 L 15 150 L 18 280 L 0 320 L -18 280 Z" fill="url(#goldShine)" opacity="0.95"/>
+    <!-- Liser� col -->
+    <path d="M -90 140 L -40 150 L -45 200 L -100 180 Z" fill="#03241e" opacity="0.5"/>
+    <path d="M 90 140 L 40 150 L 45 200 L 100 180 Z" fill="#03241e" opacity="0.5"/>
+  </g>
+
+  <!-- Texture grain subtile -->
+  <rect width="600" height="800" filter="url(#grain)" opacity="0.15"/>
+
+  <!-- Bandeau or en bas -->
+  <rect x="0" y="730" width="600" height="70" fill="url(#goldShine)" opacity="0.92"/>
+
+  <!-- Texte -->
+  <g text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, sans-serif">
+    <text x="300" y="765" font-size="20" font-weight="900" fill="#03241e" letter-spacing="1">ELIMANE SAKHO SEMB�NE</text>
+    <text x="300" y="787" font-size="11" font-weight="700" fill="#03241e" letter-spacing="2">MAIRE DE RUFISQUE-EST</text>
+  </g>
+
+  <!-- Cadre or fin -->
+  <rect x="3" y="3" width="594" height="794" fill="none" stroke="url(#goldShine)" stroke-width="3" opacity="0.4"/>
+</svg>

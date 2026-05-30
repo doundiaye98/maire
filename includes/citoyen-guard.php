@@ -14,7 +14,17 @@ require __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/citoyen-session.php';
 
 if (!maire_citoyen_session_valid()) {
-    header('Location: connexion.php?besoin=connexion', true, 302);
+    $pageCourante = basename((string) ($_SERVER['SCRIPT_NAME'] ?? 'profil.php'));
+    if ($pageCourante === '' || $pageCourante === '.' || str_contains($pageCourante, '/')) {
+        $pageCourante = 'profil.php';
+    }
+    $apresConnexion = 'citoyen/' . $pageCourante;
+    $queryCourante = trim((string) ($_SERVER['QUERY_STRING'] ?? ''));
+    if ($queryCourante !== '') {
+        $apresConnexion .= '?' . $queryCourante;
+    }
+
+    header('Location: connexion.php?besoin=connexion&apres=' . urlencode($apresConnexion), true, 302);
     exit;
 }
 

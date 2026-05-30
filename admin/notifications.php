@@ -16,10 +16,6 @@ if ($pdo !== null && !maire_super_admin_session_valid() && !maire_feature_dispon
     exit;
 }
 
-if (empty($_SESSION['abo_admin_csrf'])) {
-    $_SESSION['abo_admin_csrf'] = bin2hex(random_bytes(32));
-}
-
 if ($pdo !== null) {
     maire_ensure_notifications_tables($pdo);
 }
@@ -28,8 +24,7 @@ $flash = '';
 $flashType = 'success';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
-    $csrf = (string) ($_POST['csrf'] ?? '');
-    if (!hash_equals((string) $_SESSION['abo_admin_csrf'], $csrf)) {
+    if (!maire_csrf_validate(MAIRE_CSRF_SCOPE_ADMIN)) {
         $flash = 'Jeton CSRF invalide.';
         $flashType = 'danger';
     } elseif (!maire_rate_limit_allow('notif_send', 6, 60)) {
@@ -126,7 +121,7 @@ require __DIR__ . '/../includes/header.php';
             <article class="card">
                 <h2>📤 Composer un nouveau message</h2>
                 <form method="POST" action="notifications.php" style="display:grid;gap:0.7rem;">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
 
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;">
                         <div>

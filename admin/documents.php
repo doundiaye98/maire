@@ -11,16 +11,11 @@ declare(strict_types=1);
 require __DIR__ . '/../includes/admin-guard.php';
 require_once __DIR__ . '/../includes/documents-publics.php';
 
-if (empty($_SESSION['abo_admin_csrf'])) {
-    $_SESSION['abo_admin_csrf'] = bin2hex(random_bytes(32));
-}
-
 $flash = '';
 $flashType = 'success';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
-    $csrf = (string) ($_POST['csrf'] ?? '');
-    if (!hash_equals((string) $_SESSION['abo_admin_csrf'], $csrf)) {
+    if (!maire_csrf_validate(MAIRE_CSRF_SCOPE_ADMIN)) {
         $flash = 'Jeton CSRF invalide.';
         $flashType = 'danger';
     } else {
@@ -140,7 +135,7 @@ require __DIR__ . '/../includes/header.php';
             <article class="card">
                 <h2>📤 Publier un nouveau document</h2>
                 <form method="POST" action="documents.php" enctype="multipart/form-data" style="display:grid;gap:0.6rem;">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                     <input type="hidden" name="action" value="upload">
 
                     <div style="display:grid;grid-template-columns:1fr 2fr;gap:0.6rem;">
@@ -215,7 +210,7 @@ require __DIR__ . '/../includes/header.php';
                             <details style="margin-top:0.6rem;">
                                 <summary style="cursor:pointer;font-weight:600;">✏️ Modifier les métadonnées</summary>
                                 <form method="POST" action="documents.php" style="display:grid;gap:0.5rem;margin-top:0.6rem;">
-                                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                     <input type="hidden" name="action" value="maj_meta">
                                     <input type="hidden" name="id" value="<?php echo (int) $doc['id']; ?>">
                                     <div style="display:grid;grid-template-columns:1fr 2fr;gap:0.5rem;">
@@ -237,7 +232,7 @@ require __DIR__ . '/../includes/header.php';
                                 <a class="btn btn-outline-dark" href="../telecharger-document.php?id=<?php echo (int) $doc['id']; ?>" download>⬇ Prévisualiser</a>
 
                                 <form method="POST" action="documents.php" style="display:inline;">
-                                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                     <input type="hidden" name="action" value="toggle">
                                     <input type="hidden" name="id" value="<?php echo (int) $doc['id']; ?>">
                                     <input type="hidden" name="nouveau_statut" value="<?php echo $publie ? '0' : '1'; ?>">
@@ -247,7 +242,7 @@ require __DIR__ . '/../includes/header.php';
                                 </form>
 
                                 <form method="POST" action="documents.php" style="display:inline;" onsubmit="return confirm('Supprimer définitivement ce document (fichier + entrée DB) ?');">
-                                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                     <input type="hidden" name="action" value="supprimer">
                                     <input type="hidden" name="id" value="<?php echo (int) $doc['id']; ?>">
                                     <button type="submit" class="btn btn-outline-dark" style="color:#dc2626;">🗑 Supprimer</button>

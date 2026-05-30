@@ -21,14 +21,15 @@ require __DIR__ . '/includes/header.php';
 ?>
 <main class="overflow-hidden">
     <!-- HERO -->
-    <section class="relative maire-hero-bg text-white py-24 maire-grain">
+    <section class="relative maire-hero-bg text-white py-24 lg:py-28 maire-grain overflow-hidden">
         <div class="absolute -top-32 -right-32 w-[35rem] h-[35rem] bg-fuchsia-500/25 maire-blob blur-3xl pointer-events-none" aria-hidden="true"></div>
         <div class="absolute -bottom-32 -left-32 w-[35rem] h-[35rem] bg-gold-400/25 maire-blob blur-3xl pointer-events-none" style="animation-delay: -10s;" aria-hidden="true"></div>
+        <div class="absolute inset-0 opacity-[0.08] pointer-events-none" style="background-image: linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px); background-size: 44px 44px;" aria-hidden="true"></div>
 
         <div class="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
             <div class="flex flex-wrap items-end justify-between gap-8">
                 <div class="max-w-2xl">
-                    <span class="maire-tag bg-white/10 backdrop-blur-sm border border-white/20 text-gold-300 mb-5">
+                    <span class="maire-section-kicker mb-5 !bg-white/12 !text-white !border-white/20">
                         <span class="w-1.5 h-1.5 rounded-full bg-gold-400 animate-pulse"></span>
                         Démocratie participative
                     </span>
@@ -40,22 +41,23 @@ require __DIR__ . '/includes/header.php';
                     </p>
                 </div>
                 <div class="grid grid-cols-3 gap-3 min-w-[340px]">
-                    <div class="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20">
-                        <p class="text-3xl font-black"><span class="maire-counter" data-target="<?php echo count($ouvertes); ?>">0</span></p>
-                        <p class="text-[10px] text-mairie-200 uppercase tracking-wider font-bold mt-1">Ouvertes</p>
-                    </div>
-                    <div class="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20">
-                        <p class="text-3xl font-black"><span class="maire-counter" data-target="<?php echo count($fermees); ?>">0</span></p>
-                        <p class="text-[10px] text-mairie-200 uppercase tracking-wider font-bold mt-1">Clôturées</p>
-                    </div>
-                    <div class="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20">
-                        <p class="text-3xl font-black"><span class="maire-counter" data-target="<?php echo $totalVotes; ?>">0</span></p>
-                        <p class="text-[10px] text-mairie-200 uppercase tracking-wider font-bold mt-1">Votes exprimés</p>
-                    </div>
+                    <article class="maire-kpi-card">
+                        <p class="maire-kpi-card__value"><span class="maire-counter" data-target="<?php echo count($ouvertes); ?>">0</span></p>
+                        <p class="maire-kpi-card__label">Ouvertes</p>
+                    </article>
+                    <article class="maire-kpi-card">
+                        <p class="maire-kpi-card__value"><span class="maire-counter" data-target="<?php echo count($fermees); ?>">0</span></p>
+                        <p class="maire-kpi-card__label">Clôturées</p>
+                    </article>
+                    <article class="maire-kpi-card">
+                        <p class="maire-kpi-card__value"><span class="maire-counter" data-target="<?php echo $totalVotes; ?>">0</span></p>
+                        <p class="maire-kpi-card__label">Votes exprimés</p>
+                    </article>
                 </div>
             </div>
         </div>
     </section>
+    
 
     <!-- CONSULTATIONS OUVERTES -->
     <section class="py-16 bg-slate-50 dark:bg-slate-900">
@@ -76,7 +78,7 @@ require __DIR__ . '/includes/header.php';
             </div>
 
             <?php if (empty($ouvertes)): ?>
-                <div class="tw-card p-12 text-center">
+                <div class="maire-panel p-12 text-center">
                     <div class="text-6xl mb-4 opacity-40">🗳️</div>
                     <h3 class="text-xl font-black text-slate-900 dark:text-white mb-2">Aucune consultation ouverte</h3>
                     <p class="text-slate-600 dark:text-slate-400">La mairie lance régulièrement de nouvelles consultations. Revenez bientôt !</p>
@@ -123,13 +125,13 @@ require __DIR__ . '/includes/header.php';
                 </div>
 
                 <?php if (empty($fermees)): ?>
-                    <div class="tw-card p-8 text-center">
+                    <div class="maire-panel p-8 text-center">
                         <p class="text-slate-500 dark:text-slate-400">Aucune consultation passée à afficher.</p>
                     </div>
                 <?php else: ?>
                     <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <?php foreach (array_slice($fermees, 0, 24) as $c): ?>
-                        <article class="tw-card p-5 group">
+                        <article class="maire-panel p-5 group">
                             <div class="flex items-start justify-between gap-2 mb-2">
                                 <span class="maire-tag bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300">Fermée</span>
                                 <span class="text-[11px] text-slate-500 dark:text-slate-400 font-bold">📅 <?php echo htmlspecialchars((string) $c['date_fin'], ENT_QUOTES, 'UTF-8'); ?></span>

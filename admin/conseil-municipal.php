@@ -15,16 +15,11 @@ if ($pdo !== null && !maire_super_admin_session_valid() && !maire_feature_dispon
     exit;
 }
 
-if (empty($_SESSION['abo_admin_csrf'])) {
-    $_SESSION['abo_admin_csrf'] = bin2hex(random_bytes(32));
-}
-
 $flash = '';
 $flashType = 'success';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
-    $csrf = (string) ($_POST['csrf'] ?? '');
-    if (!hash_equals((string) $_SESSION['abo_admin_csrf'], $csrf)) {
+    if (!maire_csrf_validate(MAIRE_CSRF_SCOPE_ADMIN)) {
         $flash = 'Jeton CSRF invalide.';
         $flashType = 'danger';
     } else {
@@ -111,7 +106,7 @@ require __DIR__ . '/../includes/header.php';
             <article class="card">
                 <h2>➕ Programmer une nouvelle session</h2>
                 <form method="POST" action="conseil-municipal.php" style="display:grid;gap:0.7rem;">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                     <input type="hidden" name="action" value="creer">
 
                     <div>
@@ -201,7 +196,7 @@ require __DIR__ . '/../includes/header.php';
                             </header>
 
                             <form method="POST" action="conseil-municipal.php" style="margin-top:0.5rem;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-                                <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                                <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                 <input type="hidden" name="action" value="mise_a_jour">
                                 <input type="hidden" name="id" value="<?php echo $sid; ?>">
                                 <select name="statut" style="padding:0.4rem;border:1px solid #cbd5e1;border-radius:6px;">
@@ -221,7 +216,7 @@ require __DIR__ . '/../includes/header.php';
                             <div class="detail-actions" style="margin-top:0.5rem;">
                                 <a class="btn btn-outline-dark" href="../conseil-municipal.php?id=<?php echo $sid; ?>" target="_blank">Voir page publique ↗</a>
                                 <form method="POST" action="conseil-municipal.php" style="display:inline;" onsubmit="return confirm('Supprimer définitivement cette session ?');">
-                                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['abo_admin_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                                    <?php echo maire_csrf_field(MAIRE_CSRF_SCOPE_ADMIN); ?>
                                     <input type="hidden" name="action" value="supprimer">
                                     <input type="hidden" name="id" value="<?php echo $sid; ?>">
                                     <button type="submit" class="btn btn-outline-dark" style="color:#dc2626;">🗑 Supprimer</button>

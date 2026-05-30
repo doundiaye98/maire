@@ -9,15 +9,14 @@ require __DIR__ . '/../includes/citoyen-guard.php';
 require_once __DIR__ . '/../includes/signalements.php';
 require_once __DIR__ . '/../includes/maire-rate-limit.php';
 require_once __DIR__ . '/../includes/feature-gates.php';
+require_once __DIR__ . '/../includes/csrf.php';
+
+$citoyenCsrfScope = MAIRE_CSRF_SCOPE_CITOYEN;
 
 if ($pdo !== null && !maire_feature_disponible($pdo, 'signalements_citoyens')) {
     $palierCommune = maire_palier_commune_actuel($pdo);
     maire_render_paywall_page('signalements_citoyens', $palierCommune, 'public');
     exit;
-}
-
-if (empty($_SESSION['citoyen_csrf'])) {
-    $_SESSION['citoyen_csrf'] = bin2hex(random_bytes(32));
 }
 
 $flash = '';
@@ -33,9 +32,8 @@ $dataSaisie = [
 $idCreated = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
-    $csrf = (string) ($_POST['csrf'] ?? '');
-    if (!hash_equals((string) $_SESSION['citoyen_csrf'], $csrf)) {
-        $flash = 'Jeton de sécurité invalide. Recharge la page.';
+    if (!maire_csrf_validate($citoyenCsrfScope)) {
+        $flash = maire_csrf_error_message();
         $flashType = 'danger';
     } elseif (!maire_rate_limit_allow('signalement_creation', 20, 600)) {
         $flash = 'Trop de signalements créés depuis ce réseau. Réessaie dans quelques minutes.';
@@ -71,16 +69,17 @@ require __DIR__ . '/../includes/header.php';
 ?>
 <main class="overflow-hidden">
     <!-- HERO -->
-    <section class="relative maire-hero-bg text-white py-20 maire-grain">
+    <section class="relative maire-hero-bg text-white py-20 lg:py-24 maire-grain overflow-hidden">
         <div class="absolute -top-32 -right-32 w-[35rem] h-[35rem] bg-red-500/25 maire-blob blur-3xl pointer-events-none" aria-hidden="true"></div>
         <div class="absolute -bottom-32 -left-32 w-[35rem] h-[35rem] bg-gold-400/25 maire-blob blur-3xl pointer-events-none" style="animation-delay: -10s;" aria-hidden="true"></div>
+        <div class="absolute inset-0 opacity-[0.08] pointer-events-none" style="background-image: linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px); background-size: 44px 44px;" aria-hidden="true"></div>
 
         <div class="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 relative z-10">
             <a href="profil.php" class="inline-flex items-center gap-2 text-mairie-200 hover:text-white text-sm font-bold mb-6 transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
                 Retour au profil
             </a>
-            <span class="maire-tag bg-white/10 backdrop-blur-sm border border-white/20 text-gold-300 mb-4">
+            <span class="maire-section-kicker mb-4 !bg-white/12 !text-white !border-white/20">
                 <span class="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse"></span>
                 Espace citoyen · Signalement
             </span>
@@ -112,18 +111,18 @@ require __DIR__ . '/../includes/header.php';
             <?php endif; ?>
 
             <?php if ($idCreated === null): ?>
-            <article class="tw-card p-7 md:p-10">
+            <article class="maire-form-shell">
                 <h2 class="text-2xl font-black text-slate-900 dark:text-white mb-5 flex items-center gap-2">
                     <span class="w-11 h-11 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 text-white flex items-center justify-center text-xl">📢</span>
                     Détails du signalement
                 </h2>
 
                 <form method="POST" action="signaler.php" enctype="multipart/form-data" class="space-y-4">
-                    <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['citoyen_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php echo maire_csrf_field($citoyenCsrfScope); ?>
 
                     <div>
                         <label for="categorie" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Catégorie *</label>
-                        <select id="categorie" name="categorie" required class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+                        <select id="categorie" name="categorie" required class="tw-input">
                             <?php foreach (MAIRE_SIGNALEMENTS_CATEGORIES as $code => $label): ?>
                                 <option value="<?php echo htmlspecialchars($code, ENT_QUOTES, 'UTF-8'); ?>" <?php echo $dataSaisie['categorie'] === $code ? 'selected' : ''; ?>>
                                     <?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>
@@ -134,12 +133,12 @@ require __DIR__ . '/../includes/header.php';
 
                     <div>
                         <label for="titre" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Titre court *</label>
-                        <input type="text" id="titre" name="titre" required maxlength="180" value="<?php echo htmlspecialchars($dataSaisie['titre'], ENT_QUOTES, 'UTF-8'); ?>" placeholder="Ex : Lampadaire en panne devant l'école" class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+                        <input type="text" id="titre" name="titre" required maxlength="180" value="<?php echo htmlspecialchars($dataSaisie['titre'], ENT_QUOTES, 'UTF-8'); ?>" placeholder="Ex : Lampadaire en panne devant l'école" class="tw-input">
                     </div>
 
                     <div>
                         <label for="description" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Description détaillée *</label>
-                        <textarea id="description" name="description" required maxlength="4000" rows="5" placeholder="Décrivez précisément le problème (depuis quand, conséquences, etc.)" class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition resize-y"><?php echo htmlspecialchars($dataSaisie['description'], ENT_QUOTES, 'UTF-8'); ?></textarea>
+                        <textarea id="description" name="description" required maxlength="4000" rows="5" placeholder="Décrivez précisément le problème (depuis quand, conséquences, etc.)" class="tw-input resize-y"><?php echo htmlspecialchars($dataSaisie['description'], ENT_QUOTES, 'UTF-8'); ?></textarea>
                     </div>
 
                     <div>
@@ -162,7 +161,7 @@ require __DIR__ . '/../includes/header.php';
                         <input type="hidden" id="longitude" name="longitude" value="<?php echo htmlspecialchars($dataSaisie['longitude'], ENT_QUOTES, 'UTF-8'); ?>">
 
                         <label for="adresse_libre" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5 mt-3">Adresse / repère <small class="text-slate-400 font-normal">(facultatif)</small></label>
-                        <input type="text" id="adresse_libre" name="adresse_libre" maxlength="255" value="<?php echo htmlspecialchars($dataSaisie['adresse_libre'], ENT_QUOTES, 'UTF-8'); ?>" placeholder="Ex : Rue 12, près de la pharmacie Keury Souf" class="w-full px-3 py-2.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:border-mairie-500 focus:ring-2 focus:ring-mairie-200 dark:focus:ring-mairie-900 outline-none transition">
+                        <input type="text" id="adresse_libre" name="adresse_libre" maxlength="255" value="<?php echo htmlspecialchars($dataSaisie['adresse_libre'], ENT_QUOTES, 'UTF-8'); ?>" placeholder="Ex : Rue 12, près de la pharmacie Keury Souf" class="tw-input">
                     </fieldset>
 
                     <div class="flex flex-wrap gap-3 pt-3">

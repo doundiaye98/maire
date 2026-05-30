@@ -6,14 +6,14 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 
 require_once __DIR__ . '/../includes/super-admin-session.php';
+require_once __DIR__ . '/../includes/csrf.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: ../abonnement.php', true, 302);
     exit;
 }
 
-$csrf = (string) ($_POST['csrf'] ?? '');
-if (!hash_equals($_SESSION['abo_admin_csrf'] ?? '', $csrf)) {
+if (!maire_csrf_validate(MAIRE_CSRF_SCOPE_ADMIN)) {
     header('Location: ../abonnement.php', true, 302);
     exit;
 }

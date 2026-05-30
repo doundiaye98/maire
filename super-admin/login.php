@@ -12,9 +12,35 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
+require_once __DIR__ . '/../includes/env-loader.php';
+maire_env_bootstrap();
+require_once __DIR__ . '/../includes/logger.php';
+require_once __DIR__ . '/../includes/super-admin-session.php';
+
+// Bloque l'accès même au formulaire de connexion si l'IP n'est pas autorisée
+// (n'ajoute aucune contrainte tant que SUPER_ADMIN_ALLOWED_IPS est vide).
+if (!maire_super_admin_ip_allowed()) {
+    http_response_code(403);
+    maire_log_warning('super_admin_login_ip_rejected', [
+        'ip' => maire_client_ip(),
+        'ua' => mb_substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 200),
+    ]);
+    header('Content-Type: text/html; charset=UTF-8');
+    echo '<!doctype html><meta charset="utf-8"><title>403 — Accès refusé</title>'
+        . '<style>body{font-family:system-ui;background:#0a3c34;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;padding:20px}</style>'
+        . '<div><h1 style="font-size:48px;margin:0 0 12px">403</h1>'
+        . '<p style="font-size:18px;margin:0 0 8px">Accès refusé.</p>'
+        . '<p style="opacity:.7;font-size:14px">Cette console est restreinte à un ensemble d\'adresses IP autorisées.</p>'
+        . '<p style="opacity:.5;font-size:12px;margin-top:24px">Mairie de Rufisque-Est</p></div>';
+    exit;
+}
+
 require __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/site-paths.php';
 require_once __DIR__ . '/../includes/super-admin-account.php';
+require_once __DIR__ . '/../includes/csrf.php';
+
+$superAdminLoginCsrfScope = MAIRE_CSRF_SCOPE_SUPER_ADMIN_LOGIN;
 
 $message = '';
 $messageType = 'info';
@@ -30,10 +56,6 @@ if ($pdo === null) {
         $message = 'Table super_admins indisponible : ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
         $messageType = 'danger';
     }
-}
-
-if (empty($_SESSION['editeur_login_csrf'])) {
-    $_SESSION['editeur_login_csrf'] = bin2hex(random_bytes(32));
 }
 
 $besoin = (string) ($_GET['besoin'] ?? '');
@@ -63,9 +85,8 @@ if ($besoin !== '' && $message === '') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo !== null) {
-    $csrfRecu = (string) ($_POST['csrf'] ?? '');
-    if (!hash_equals((string) $_SESSION['editeur_login_csrf'], $csrfRecu)) {
-        $message = 'Jeton de sécurité invalide. Recharge la page et réessaie.';
+    if (!maire_csrf_validate($superAdminLoginCsrfScope)) {
+        $message = maire_csrf_error_message();
         $messageType = 'danger';
     } else {
         $emailSaisie = trim((string) ($_POST['email'] ?? ''));
@@ -153,7 +174,7 @@ $alertConfig = match ($messageType) {
                     <?php endif; ?>
 
                     <form method="POST" action="login.php" autocomplete="off" class="space-y-4">
-                        <input type="hidden" name="csrf" value="<?php echo htmlspecialchars((string) $_SESSION['editeur_login_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php echo maire_csrf_field($superAdminLoginCsrfScope); ?>
 
                         <div>
                             <label for="email" class="block text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">Email éditeur</label>
@@ -173,14 +194,16 @@ $alertConfig = match ($messageType) {
                         </div>
                     </form>
 
+                    <?php if (function_exists('maire_is_dev_env') && maire_is_dev_env()): ?>
                     <div class="mt-5 pt-5 border-t border-slate-200 dark:border-slate-700 text-xs">
-                        <p class="font-bold text-amber-700 dark:text-amber-300 mb-1">⚠️ Démonstration</p>
+                        <p class="font-bold text-amber-700 dark:text-amber-300 mb-1">⚠️ Démonstration (mode dev uniquement)</p>
                         <p class="text-slate-600 dark:text-slate-400">
                             <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 font-mono">editeur@demo.rufisque.sn</code> ·
                             <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 font-mono">DemoEditeur2026!</code>
                         </p>
-                        <p class="text-slate-500 dark:text-slate-500 mt-1">À changer lors du déploiement.</p>
+                        <p class="text-slate-500 dark:text-slate-500 mt-1">Ce bloc n'apparaît jamais en production.</p>
                     </div>
+                    <?php endif; ?>
                 </article>
             </div>
         </div>
